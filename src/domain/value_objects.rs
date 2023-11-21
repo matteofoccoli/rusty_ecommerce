@@ -9,6 +9,10 @@ pub struct Address {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} - {}, {} ({})", self.street, self.zip_code, self.city, self.state)
+        write!(
+            f,
+            "{} - {}, {} ({})",
+            self.street, self.zip_code, self.city, self.state
+        )
     }
 }

@@ -1,12 +1,15 @@
 # To Do
 
 - [x] implement domain (entities)
-- [] implement domain services
+- [x] first commit on Github
+- [] implement domain services using repository and domain logic
 - [] implement application services
-- [] first commit on Github
 - [] use Postgres
 - [] use Docker
 - [] use Kafka
+- [] setup github actions 
+- [] add linter
+- [] expose API (rest or graphql)
 
 
 

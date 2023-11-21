@@ -32,7 +32,7 @@ impl Order {
         Self {
             id,
             customer,
-            items: vec!()
+            items: vec![],
         }
     }
 
@@ -40,7 +40,7 @@ impl Order {
         self.items.push(item);
     }
 
-    pub fn total_price(self) -> f32{
+    pub fn total_price(self) -> f32 {
         let total: f32 = self.items.iter().map(|x| x.price * x.quantity as f32).sum();
         (total * 100.0).round() / 100.0
     }
@@ -49,30 +49,43 @@ impl Order {
 pub struct Item {
     pub price: f32,
     pub quantity: u32,
+    pub product: Product,
 }
 
 impl Item {
-    pub fn new(price: f32, quantity: u32) -> Self {
+    pub fn new(price: f32, quantity: u32, product: Product) -> Self {
         Self {
             price,
-            quantity
+            quantity,
+            product,
         }
+    }
+}
+
+pub struct Product {
+    pub id: Uuid,
+    pub name: String,
+}
+
+impl Product {
+    fn new(id: Uuid, name: String) -> Self {
+        Self { id, name }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::domain::entities::Address;
+    use crate::domain::entities::{Address, Product};
 
-    use super::{Customer, Order, Item};
+    use super::{Customer, Item, Order};
     use uuid::Uuid;
 
     #[test]
     fn create_a_customer() {
         let id = new_uuid();
-        
+
         let customer = new_customer(id);
-        
+
         assert_eq!(id, customer.id);
         assert_eq!("John".to_string(), customer.first_name);
         assert_eq!("Appleseed".to_string(), customer.last_name);
@@ -82,7 +95,7 @@ mod test {
     fn create_an_order() {
         let order_id = new_uuid();
         let customer_id = new_uuid();
-        
+
         let order = new_order(order_id, customer_id);
 
         assert_eq!(order_id, order.id);
@@ -93,17 +106,39 @@ mod test {
     fn add_items_to_order() {
         let mut order = new_order(new_uuid(), new_uuid());
 
-        order.add(Item::new(9.99, 1));
+        order.add(Item::new(
+            9.99,
+            1,
+            Product::new(new_uuid(), "Tomato".to_string()),
+        ));
+        order.add(Item::new(
+            5.55,
+            2,
+            Product::new(new_uuid(), "Lettuce".to_string()),
+        ));
+        order.add(Item::new(
+            7.77,
+            3,
+            Product::new(new_uuid(), "Avocado".to_string()),
+        ));
 
-        assert_eq!(1, order.items.len());
+        assert_eq!(3, order.items.len());
     }
 
     #[test]
     fn calculate_total_price_of_an_order() {
         let mut order = new_order(new_uuid(), new_uuid());
 
-        order.add(Item::new(9.99, 10));
-        order.add(Item::new(5.55, 2));
+        order.add(Item::new(
+            9.99,
+            10,
+            Product::new(new_uuid(), "Coffee".to_string()),
+        ));
+        order.add(Item::new(
+            5.55,
+            2,
+            Product::new(new_uuid(), "Sugar".to_string()),
+        ));
 
         assert_eq!(111.0, order.total_price());
     }
@@ -127,6 +162,6 @@ mod test {
     }
 
     fn new_uuid() -> Uuid {
-        Uuid::new_v4()        
+        Uuid::new_v4()
     }
 }
