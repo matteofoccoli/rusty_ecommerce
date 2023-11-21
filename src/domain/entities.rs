@@ -92,7 +92,7 @@ mod test {
     }
 
     #[test]
-    fn create_an_order() {
+    fn create_an_order_for_a_customer() {
         let order_id = new_uuid();
         let customer_id = new_uuid();
 
@@ -106,21 +106,9 @@ mod test {
     fn add_items_to_order() {
         let mut order = new_order(new_uuid(), new_uuid());
 
-        order.add(Item::new(
-            9.99,
-            1,
-            Product::new(new_uuid(), "Tomato".to_string()),
-        ));
-        order.add(Item::new(
-            5.55,
-            2,
-            Product::new(new_uuid(), "Lettuce".to_string()),
-        ));
-        order.add(Item::new(
-            7.77,
-            3,
-            Product::new(new_uuid(), "Avocado".to_string()),
-        ));
+        order.add(new_item(9.99, 1, new_uuid(), "Tomato".to_string()));
+        order.add(new_item(5.55, 2, new_uuid(), "Lettuce".to_string()));
+        order.add(new_item(7.77, 3, new_uuid(), "Avocado".to_string()));
 
         assert_eq!(3, order.items.len());
     }
@@ -129,18 +117,18 @@ mod test {
     fn calculate_total_price_of_an_order() {
         let mut order = new_order(new_uuid(), new_uuid());
 
-        order.add(Item::new(
-            9.99,
-            10,
-            Product::new(new_uuid(), "Coffee".to_string()),
-        ));
-        order.add(Item::new(
-            5.55,
-            2,
-            Product::new(new_uuid(), "Sugar".to_string()),
-        ));
+        order.add(new_item(9.99, 10, new_uuid(), "Coffee".to_string()));
+        order.add(new_item(5.55, 2, new_uuid(), "Sugar".to_string()));
 
         assert_eq!(111.0, order.total_price());
+    }
+
+    fn new_item(price: f32, quantity: u32, product_id: Uuid, product_name: String) -> Item {
+        Item {
+            price,
+            quantity,
+            product: Product::new(product_id, product_name),
+        }
     }
 
     fn new_order(id: Uuid, customer_id: Uuid) -> Order {
