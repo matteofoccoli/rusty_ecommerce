@@ -19,4 +19,5 @@ fn main() {
     };
 
     println!("My first customer is: {}", customer);
+    println!("He lives in: {}", customer.address);
 }

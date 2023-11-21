@@ -1,6 +1,6 @@
 # To Do
 
-- [] implement domain (entities)
+- [x] implement domain (entities)
 - [] implement domain services
 - [] implement application services
 - [] first commit on Github
