@@ -33,13 +33,3 @@ pub struct OrderItem {
     pub quantity: u32,
     pub product_id: ProductId,
 }
-
-impl OrderItem {
-    pub fn create(price: f32, quantity: u32, product_id: ProductId) -> Self {
-        Self {
-            price,
-            quantity,
-            product_id,
-        }
-    }
-}

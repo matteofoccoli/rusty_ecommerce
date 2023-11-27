@@ -1,7 +1,9 @@
 use uuid::Uuid;
 
-use crate::domain::entities::Customer;
-use crate::domain::value_objects::{Address, CustomerId};
+use crate::domain::{
+    entities::customer::Customer,
+    value_objects::{Address, CustomerId},
+};
 
 mod domain;
 
