@@ -1,5 +1,7 @@
 use std::fmt;
 
+use uuid::Uuid;
+
 pub struct Address {
     pub street: String,
     pub city: String,
@@ -16,3 +18,9 @@ impl fmt::Display for Address {
         )
     }
 }
+
+#[derive(PartialEq, Debug)]
+pub struct CustomerId(pub Uuid);
+
+#[derive(PartialEq, Debug)]
+pub struct OrderId(pub Uuid);

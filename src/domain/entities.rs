@@ -2,10 +2,10 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use super::value_objects::Address;
+use super::value_objects::{Address, CustomerId, OrderId};
 
 pub struct Customer {
-    pub id: Uuid,
+    pub id: CustomerId,
     pub first_name: String,
     pub last_name: String,
     pub address: Address,
@@ -16,13 +16,13 @@ impl fmt::Display for Customer {
         write!(
             f,
             "{}, {} (uuid: {})",
-            self.last_name, self.first_name, self.id
+            self.last_name, self.first_name, self.id.0
         )
     }
 }
 
 pub struct Order {
-    pub id: Uuid,
+    pub id: OrderId,
     pub customer: Customer,
     pub items: Vec<Item>,
 }
@@ -30,7 +30,7 @@ pub struct Order {
 impl Order {
     pub fn new(id: Uuid, customer: Customer) -> Self {
         Self {
-            id,
+            id: OrderId(id),
             customer,
             items: vec![],
         }
@@ -75,7 +75,10 @@ impl Product {
 
 #[cfg(test)]
 mod test {
-    use crate::domain::entities::{Address, Product};
+    use crate::domain::{
+        entities::{Address, Product},
+        value_objects::{CustomerId, OrderId},
+    };
 
     use super::{Customer, Item, Order};
     use uuid::Uuid;
@@ -86,7 +89,7 @@ mod test {
 
         let customer = new_customer(id);
 
-        assert_eq!(id, customer.id);
+        assert_eq!(CustomerId(id), customer.id);
         assert_eq!("John".to_string(), customer.first_name);
         assert_eq!("Appleseed".to_string(), customer.last_name);
     }
@@ -98,8 +101,8 @@ mod test {
 
         let order = new_order(order_id, customer_id);
 
-        assert_eq!(order_id, order.id);
-        assert_eq!(customer_id, order.customer.id);
+        assert_eq!(OrderId(order_id), order.id);
+        assert_eq!(CustomerId(customer_id), order.customer.id);
     }
 
     #[test]
@@ -137,7 +140,7 @@ mod test {
 
     fn new_customer(id: Uuid) -> Customer {
         Customer {
-            id,
+            id: CustomerId(id),
             first_name: "John".to_string(),
             last_name: "Appleseed".to_string(),
             address: Address {

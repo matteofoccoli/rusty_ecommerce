@@ -1,13 +1,13 @@
 use uuid::Uuid;
 
 use crate::domain::entities::Customer;
-use crate::domain::value_objects::Address;
+use crate::domain::value_objects::{Address, CustomerId};
 
 mod domain;
 
 fn main() {
     let customer = Customer {
-        id: Uuid::new_v4(),
+        id: CustomerId(Uuid::new_v4()),
         first_name: "Clark".to_string(),
         last_name: "Kent".to_string(),
         address: Address {
