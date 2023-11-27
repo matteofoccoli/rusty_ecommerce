@@ -49,22 +49,10 @@ mod test {
     fn create_a_new_order() {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
-        let mut customer_repository = MockCustomerRepository::new();
-        customer_repository.expect_find_by_id().returning(move |_| {
-            Some(Customer {
-                id: CustomerId(customer_id),
-                first_name: "Mario".to_string(),
-                last_name: "Luigi".to_string(),
-                address: Address {
-                    street: "street".to_string(),
-                    city: "city".to_string(),
-                    zip_code: "zip_code".to_string(),
-                    state: "state".to_string(),
-                },
-            })
-        });
         let order_service = OrderService {
-            customer_repository: Box::new(customer_repository),
+            customer_repository: Box::new(mock_customer_repository_returning_a_customer(
+                customer_id,
+            )),
         };
 
         let result = order_service.create_order(order_id, customer_id);
@@ -80,16 +68,38 @@ mod test {
     fn return_error_if_customer_does_not_exist() {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
-        let mut customer_repository = MockCustomerRepository::new();
-        customer_repository
-            .expect_find_by_id()
-            .returning(move |_| None);
         let order_service = OrderService {
-            customer_repository: Box::new(customer_repository),
+            customer_repository: Box::new(mock_customer_repository_returning_none()),
         };
 
         let result = order_service.create_order(order_id, customer_id);
 
         assert!(result.is_err());
+    }
+
+    fn mock_customer_repository_returning_none() -> MockCustomerRepository {
+        let mut customer_repository = MockCustomerRepository::new();
+        customer_repository
+            .expect_find_by_id()
+            .returning(move |_| None);
+        customer_repository
+    }
+
+    fn mock_customer_repository_returning_a_customer(customer_id: Uuid) -> MockCustomerRepository {
+        let mut customer_repository = MockCustomerRepository::new();
+        customer_repository.expect_find_by_id().returning(move |_| {
+            Some(Customer {
+                id: CustomerId(customer_id),
+                first_name: "Mario".to_string(),
+                last_name: "Luigi".to_string(),
+                address: Address {
+                    street: "street".to_string(),
+                    city: "city".to_string(),
+                    zip_code: "zip_code".to_string(),
+                    state: "state".to_string(),
+                },
+            })
+        });
+        customer_repository
     }
 }
