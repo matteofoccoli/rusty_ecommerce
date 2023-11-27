@@ -2,7 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use super::value_objects::{Address, CustomerId, OrderId};
+use super::value_objects::{Address, CustomerId, OrderId, OrderItem};
 
 pub struct Customer {
     pub id: CustomerId,
@@ -23,20 +23,20 @@ impl fmt::Display for Customer {
 
 pub struct Order {
     pub id: OrderId,
-    pub customer: Customer,
-    pub items: Vec<Item>,
+    pub customer_id: CustomerId,
+    pub items: Vec<OrderItem>,
 }
 
 impl Order {
-    pub fn new(id: Uuid, customer: Customer) -> Self {
+    pub fn create(id: OrderId, customer_id: CustomerId) -> Self {
         Self {
-            id: OrderId(id),
-            customer,
+            id,
+            customer_id,
             items: vec![],
         }
     }
 
-    pub fn add(&mut self, item: Item) {
+    pub fn add(&mut self, item: OrderItem) {
         self.items.push(item);
     }
 
@@ -46,48 +46,29 @@ impl Order {
     }
 }
 
-pub struct Item {
-    pub price: f32,
-    pub quantity: u32,
-    pub product: Product,
-}
-
-impl Item {
-    pub fn new(price: f32, quantity: u32, product: Product) -> Self {
-        Self {
-            price,
-            quantity,
-            product,
-        }
-    }
-}
-
 pub struct Product {
     pub id: Uuid,
     pub name: String,
 }
 
 impl Product {
-    fn new(id: Uuid, name: String) -> Self {
-        Self { id, name }
-    }
 }
 
 #[cfg(test)]
 mod test {
     use crate::domain::{
-        entities::{Address, Product},
-        value_objects::{CustomerId, OrderId},
+        entities::{Address},
+        value_objects::{CustomerId, OrderId, ProductId},
     };
 
-    use super::{Customer, Item, Order};
+    use super::{Customer, OrderItem, Order};
     use uuid::Uuid;
 
     #[test]
     fn create_a_customer() {
         let id = new_uuid();
 
-        let customer = new_customer(id);
+        let customer = customer_fixture(id);
 
         assert_eq!(CustomerId(id), customer.id);
         assert_eq!("John".to_string(), customer.first_name);
@@ -99,46 +80,46 @@ mod test {
         let order_id = new_uuid();
         let customer_id = new_uuid();
 
-        let order = new_order(order_id, customer_id);
+        let order = order_fixture(order_id, customer_id);
 
         assert_eq!(OrderId(order_id), order.id);
-        assert_eq!(CustomerId(customer_id), order.customer.id);
+        assert_eq!(CustomerId(customer_id), order.customer_id);
     }
 
     #[test]
     fn add_items_to_order() {
-        let mut order = new_order(new_uuid(), new_uuid());
+        let mut order = order_fixture(new_uuid(), new_uuid());
 
-        order.add(new_item(9.99, 1, new_uuid(), "Tomato".to_string()));
-        order.add(new_item(5.55, 2, new_uuid(), "Lettuce".to_string()));
-        order.add(new_item(7.77, 3, new_uuid(), "Avocado".to_string()));
+        order.add(order_item_fixture(9.99, 1, new_uuid()));
+        order.add(order_item_fixture(5.55, 2, new_uuid()));
+        order.add(order_item_fixture(7.77, 3, new_uuid()));
 
         assert_eq!(3, order.items.len());
     }
 
     #[test]
     fn calculate_total_price_of_an_order() {
-        let mut order = new_order(new_uuid(), new_uuid());
+        let mut order = order_fixture(new_uuid(), new_uuid());
 
-        order.add(new_item(9.99, 10, new_uuid(), "Coffee".to_string()));
-        order.add(new_item(5.55, 2, new_uuid(), "Sugar".to_string()));
+        order.add(order_item_fixture(9.99, 10, new_uuid()));
+        order.add(order_item_fixture(5.55, 2, new_uuid()));
 
         assert_eq!(111.0, order.total_price());
     }
 
-    fn new_item(price: f32, quantity: u32, product_id: Uuid, product_name: String) -> Item {
-        Item {
+    fn order_item_fixture(price: f32, quantity: u32, product_id: Uuid) -> OrderItem {
+        OrderItem {
             price,
             quantity,
-            product: Product::new(product_id, product_name),
+            product_id: ProductId(product_id),
         }
     }
 
-    fn new_order(id: Uuid, customer_id: Uuid) -> Order {
-        Order::new(id, new_customer(customer_id))
+    fn order_fixture(id: Uuid, customer_id: Uuid) -> Order {
+        Order::create(OrderId(id), CustomerId(customer_id))
     }
 
-    fn new_customer(id: Uuid) -> Customer {
+    fn customer_fixture(id: Uuid) -> Customer {
         Customer {
             id: CustomerId(id),
             first_name: "John".to_string(),
