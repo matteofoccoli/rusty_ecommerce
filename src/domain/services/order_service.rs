@@ -1,26 +1,13 @@
-use mockall::predicate::*;
-use mockall::*;
-
 use uuid::Uuid;
 
 use crate::domain::{
-    entities::{customer::Customer, order::Order},
-    value_objects::{CustomerId, OrderId},
+    entities::order::Order,
+    value_objects::{CustomerId, OrderId}, repositories::{CustomerRepository, OrderRepository},
 };
 
 struct OrderService {
     pub customer_repository: Box<dyn CustomerRepository>,
     pub order_repository: Box<dyn OrderRepository>,
-}
-
-#[automock]
-trait CustomerRepository {
-    fn find_by_id(&self, id: CustomerId) -> Option<Customer>;
-}
-
-#[automock]
-trait OrderRepository {
-    fn save(&self, order: Order) -> Result<Order, String>;
 }
 
 impl OrderService {
@@ -47,8 +34,7 @@ mod test {
 
     use crate::domain::{
         entities::{customer::Customer, order::Order},
-        services::order_service::{MockCustomerRepository, MockOrderRepository},
-        value_objects::{Address, CustomerId, OrderId},
+        value_objects::{Address, CustomerId, OrderId}, repositories::{MockOrderRepository, MockCustomerRepository},
     };
 
     use super::OrderService;
