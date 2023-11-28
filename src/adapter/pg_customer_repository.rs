@@ -72,7 +72,7 @@ impl repositories::CustomerRepository for PgCustomerRepository {
                     Err(_) => Ok(None),
                 }
             }
-            Err(_) => Err("Error getting a connection from pool".to_string()),
+            Err(_) => Err("Error getting a DB connection from pool".to_string()),
         }
     }
 }

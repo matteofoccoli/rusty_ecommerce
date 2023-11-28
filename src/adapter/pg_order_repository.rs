@@ -21,15 +21,21 @@ pub struct PgOrderRepository {
 impl repositories::OrderRepository for PgOrderRepository {
     fn save(&self, order: entities::order::Order) -> Result<entities::order::Order, String> {
         use crate::schema::orders;
-        match diesel::insert_into(orders::table)
-            .values(&Order {
-                id: order.id.0,
-                customer_id: order.customer_id.0,
-            })
-            .execute(&mut self.connection_pool.get().unwrap())
-        {
-            Ok(_) => Ok(order),
-            Err(_) => Err("Error saving order on DB".to_string()),
+
+        match &mut self.connection_pool.get() {
+            Ok(connection) => {
+                match diesel::insert_into(orders::table)
+                    .values(&Order {
+                        id: order.id.0,
+                        customer_id: order.customer_id.0,
+                    })
+                    .execute(connection)
+                {
+                    Ok(_) => Ok(order),
+                    Err(_) => Err(format!("Error saving order with id {} on DB", order.id.0)),
+                }
+            }
+            Err(_) => Err("Error getting a DB connection from pool".to_string()),
         }
     }
 }
