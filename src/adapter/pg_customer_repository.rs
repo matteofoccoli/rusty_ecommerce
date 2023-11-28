@@ -11,10 +11,23 @@ use crate::domain::*;
 #[derive(Queryable, Selectable, Insertable, Debug)]
 #[diesel(table_name = crate::schema::customers)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Customer {
+struct Customer {
     pub id: Uuid,
     pub first_name: String,
     pub last_name: String,
+    #[diesel(embed)]
+    pub address: Address,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug)]
+#[diesel(table_name = crate::schema::customers)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+
+struct Address {
+    pub street: String,
+    pub city: String,
+    pub zip_code: String,
+    pub state: String,
 }
 
 pub struct PgCustomerRepository {
@@ -28,10 +41,10 @@ impl From<Customer> for entities::customer::Customer {
             first_name: value.first_name.clone(),
             last_name: value.last_name.clone(),
             address: value_objects::Address {
-                street: "foo".to_string(),
-                city: "foo".to_string(),
-                zip_code: "foo".to_string(),
-                state: "foo".to_string(),
+                street: value.address.street,
+                city: value.address.city,
+                zip_code: value.address.zip_code,
+                state: value.address.state,
             },
         }
     }
@@ -65,7 +78,7 @@ mod test {
     use uuid::Uuid;
 
     use crate::{
-        adapter::pg_customer_repository::{Customer, PgCustomerRepository},
+        adapter::pg_customer_repository::{Address, Customer, PgCustomerRepository},
         domain::{repositories::CustomerRepository, value_objects::CustomerId},
     };
 
@@ -89,6 +102,12 @@ mod test {
             id: customer_id,
             first_name: "John".to_string(),
             last_name: "Appleseed".to_string(),
+            address: Address {
+                street: "22 Elm Street".to_string(),
+                city: "Castle Rock".to_string(),
+                zip_code: "666".to_string(),
+                state: "US".to_string(),
+            }
         };
 
         diesel::insert_into(customers::table)
