@@ -12,22 +12,21 @@ use crate::domain::*;
 #[diesel(table_name = crate::schema::customers)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 struct Customer {
-    pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
+    id: Uuid,
+    first_name: String,
+    last_name: String,
     #[diesel(embed)]
-    pub address: Address,
+    address: Address,
 }
 
 #[derive(Queryable, Selectable, Insertable, Debug)]
 #[diesel(table_name = crate::schema::customers)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-
 struct Address {
-    pub street: String,
-    pub city: String,
-    pub zip_code: String,
-    pub state: String,
+    street: String,
+    city: String,
+    zip_code: String,
+    state: String,
 }
 
 pub struct PgCustomerRepository {
@@ -84,20 +83,18 @@ mod test {
     use diesel::{
         pg::PgConnection,
         r2d2::{ConnectionManager, Pool},
-        Connection, RunQueryDsl,
+        RunQueryDsl,
     };
-    use dotenvy::dotenv;
-    use std::env;
     use uuid::Uuid;
 
     use crate::{
-        adapter::pg_customer_repository::{Address, Customer, PgCustomerRepository},
+        adapter::{pg_customer_repository::{Address, Customer, PgCustomerRepository}, common},
         domain::{repositories::CustomerRepository, value_objects::CustomerId},
     };
 
     #[test]
-    pub fn store_and_retrieve_customer() {
-        let connection_pool = create_connection_pool();
+    pub fn find_customer_by_id() {
+        let connection_pool = common::create_connection_pool();
         let customer_id = save_a_customer_on_db(&connection_pool);
         let repository = PgCustomerRepository { connection_pool };
 
@@ -132,13 +129,5 @@ mod test {
         customer_id
     }
 
-    fn create_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
-        dotenv().ok();
-        let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set!");
-        let manager = ConnectionManager::<PgConnection>::new(db_url);
-        Pool::builder()
-            .test_on_check_out(true)
-            .build(manager)
-            .expect("Could not build connection pool")
-    }
+    
 }

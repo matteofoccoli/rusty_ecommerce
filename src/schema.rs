@@ -11,3 +11,15 @@ diesel::table! {
         state -> Varchar,
     }
 }
+
+diesel::table! {
+    orders (id) {
+        id -> Uuid,
+        customer_id -> Uuid,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(
+    customers,
+    orders,
+);
