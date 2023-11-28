@@ -7,7 +7,7 @@ use super::{
 
 #[automock]
 pub trait CustomerRepository {
-    fn find_by_id(&self, id: CustomerId) -> Option<Customer>;
+    fn find_by_id(&self, id: CustomerId) -> Result<Option<Customer>, String>;
 }
 
 #[automock]

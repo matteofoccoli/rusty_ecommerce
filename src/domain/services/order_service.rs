@@ -13,17 +13,18 @@ struct OrderService {
 
 impl OrderService {
     fn create_order(&self, order_id: Uuid, customer_id: Uuid) -> Result<Order, String> {
-        if self
-            .customer_repository
-            .find_by_id(CustomerId(customer_id))
-            .is_none()
-        {
-            return Err("Not existing customer".to_string());
-        }
-        let order = Order::create(OrderId(order_id), CustomerId(customer_id));
-        match self.order_repository.save(order) {
-            Ok(order) => Ok(order),
-            Err(_) => Err("Error saving order".to_string()),
+        match self.customer_repository.find_by_id(CustomerId(customer_id)) {
+            Ok(result) => match result {
+                Some(customer) => {
+                    let order = Order::create(OrderId(order_id), CustomerId(customer_id));
+                    match self.order_repository.save(order) {
+                        Ok(order) => Ok(order),
+                        Err(_) => Err("Error saving order".to_string()),
+                    }
+                }
+                None => Err("Cannot find customer".to_string()),
+            },
+            Err(_) => Err("Error reading customer".to_string()),
         }
     }
 }
@@ -82,14 +83,14 @@ mod test {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_find_by_id()
-            .returning(move |_| None);
+            .returning(move |_| Ok(None));
         customer_repository
     }
 
     fn mock_customer_repository_returning_a_customer(customer_id: Uuid) -> MockCustomerRepository {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository.expect_find_by_id().returning(move |_| {
-            Some(Customer {
+            Ok(Some(Customer {
                 id: CustomerId(customer_id),
                 first_name: "Mario".to_string(),
                 last_name: "Luigi".to_string(),
@@ -99,7 +100,7 @@ mod test {
                     zip_code: "zip_code".to_string(),
                     state: "state".to_string(),
                 },
-            })
+            }))
         });
         customer_repository
     }
