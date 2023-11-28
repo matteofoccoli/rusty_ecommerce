@@ -2,7 +2,8 @@ use uuid::Uuid;
 
 use crate::domain::{
     entities::order::Order,
-    value_objects::{CustomerId, OrderId}, repositories::{CustomerRepository, OrderRepository},
+    repositories::{CustomerRepository, OrderRepository},
+    value_objects::{CustomerId, OrderId},
 };
 
 struct OrderService {
@@ -34,7 +35,8 @@ mod test {
 
     use crate::domain::{
         entities::{customer::Customer, order::Order},
-        value_objects::{Address, CustomerId, OrderId}, repositories::{MockOrderRepository, MockCustomerRepository},
+        repositories::{MockCustomerRepository, MockOrderRepository},
+        value_objects::{Address, CustomerId, OrderId},
     };
 
     use super::OrderService;
@@ -119,5 +121,4 @@ mod test {
         order_repository.expect_save().never();
         order_repository
     }
-
 }

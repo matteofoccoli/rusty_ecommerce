@@ -1,6 +1,9 @@
 use mockall::automock;
 
-use super::{entities::{customer::Customer, order::Order}, value_objects::CustomerId};
+use super::{
+    entities::{customer::Customer, order::Order},
+    value_objects::CustomerId,
+};
 
 #[automock]
 pub trait CustomerRepository {
