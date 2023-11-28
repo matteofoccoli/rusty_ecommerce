@@ -40,12 +40,18 @@ impl From<Customer> for entities::customer::Customer {
             id: value_objects::CustomerId(value.id),
             first_name: value.first_name.clone(),
             last_name: value.last_name.clone(),
-            address: value_objects::Address {
-                street: value.address.street,
-                city: value.address.city,
-                zip_code: value.address.zip_code,
-                state: value.address.state,
-            },
+            address: value.address.into(),
+        }
+    }
+}
+
+impl From<Address> for value_objects::Address {
+    fn from(value: Address) -> Self {
+        value_objects::Address {
+            street: value.street,
+            city: value.city,
+            zip_code: value.zip_code,
+            state: value.state,
         }
     }
 }
