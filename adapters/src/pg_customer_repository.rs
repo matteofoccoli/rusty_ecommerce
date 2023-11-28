@@ -91,7 +91,7 @@ mod test {
 
     #[test]
     pub fn find_customer_by_id() {
-        let connection_pool = common::create_connection_pool();
+        let connection_pool = common::test::create_connection_pool();
         let customer_id = save_a_customer_on_db(&connection_pool);
         let repository = PgCustomerRepository { connection_pool };
 

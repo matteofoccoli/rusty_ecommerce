@@ -55,7 +55,7 @@ mod test {
             domain::value_objects::CustomerId(customer_id),
         );
         let repository = PgOrderRepository {
-            connection_pool: common::create_connection_pool(),
+            connection_pool: common::test::create_connection_pool(),
         };
 
         let result = repository.save(order);
