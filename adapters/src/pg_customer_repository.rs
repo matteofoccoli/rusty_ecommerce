@@ -27,7 +27,7 @@ struct Address {
 }
 
 pub struct PgCustomerRepository {
-    connection_pool: Pool<ConnectionManager<PgConnection>>,
+    pub connection_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
 impl From<Customer> for domain::entities::customer::Customer {

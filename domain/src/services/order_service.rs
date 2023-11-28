@@ -2,16 +2,18 @@ use uuid::Uuid;
 
 use crate::{repositories::{CustomerRepository, OrderRepository}, entities::order::Order, value_objects::{CustomerId, OrderId}};
 
-struct OrderService {
+pub struct OrderService {
     pub customer_repository: Box<dyn CustomerRepository>,
     pub order_repository: Box<dyn OrderRepository>,
 }
 
 impl OrderService {
-    fn create_order(&self, order_id: Uuid, customer_id: Uuid) -> Result<Order, String> {
+    pub fn create_order(&self, order_id: &str, customer_id: &str) -> Result<Order, String> {
+        let order_id = Uuid::parse_str(order_id).map_err(|_| "Unable to parse order id".to_string())?;
+        let customer_id = Uuid::parse_str(customer_id).map_err(|_| "Unable to parse customer id".to_string())?;
         match self.customer_repository.find_by_id(CustomerId(customer_id)) {
             Ok(result) => match result {
-                Some(customer) => {
+                Some(_) => {
                     let order = Order::create(OrderId(order_id), CustomerId(customer_id));
                     match self.order_repository.save(order) {
                         Ok(order) => Ok(order),
@@ -40,31 +42,31 @@ mod test {
 
     #[test]
     fn create_a_new_order() {
-        let order_id = Uuid::new_v4();
-        let customer_id = Uuid::new_v4();
+        let order_id = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
+        let customer_id = "2dfdeb10-8e05-11ee-8841-130a6fed61ad";
 
         let order_service = OrderService {
             customer_repository: Box::new(mock_customer_repository_returning_a_customer(
-                customer_id,
+                Uuid::parse_str(customer_id).unwrap(),
             )),
             order_repository: Box::new(mock_order_repository_saving_an_order(
-                order_id,
-                customer_id,
+                Uuid::parse_str(order_id).unwrap(),
+                Uuid::parse_str(customer_id).unwrap(),
             )),
         };
 
         let result = order_service.create_order(order_id, customer_id);
         assert!(result.is_ok());
         let order = result.unwrap();
-        assert_eq!(OrderId(order_id), order.id);
-        assert_eq!(CustomerId(customer_id), order.customer_id);
+        assert_eq!(OrderId(Uuid::parse_str(order_id).unwrap()), order.id);
+        assert_eq!(CustomerId(Uuid::parse_str(customer_id).unwrap()), order.customer_id);
         assert_eq!(0, order.items.len());
     }
 
     #[test]
     fn return_error_if_customer_does_not_exist() {
-        let order_id = Uuid::new_v4();
-        let customer_id = Uuid::new_v4();
+        let order_id = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
+        let customer_id = "2dfdeb10-8e05-11ee-8841-130a6fed61ad";
 
         let order_service = OrderService {
             customer_repository: Box::new(mock_customer_repository_returning_none()),

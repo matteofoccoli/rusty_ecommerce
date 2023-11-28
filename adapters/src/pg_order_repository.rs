@@ -13,7 +13,7 @@ struct Order {
 }
 
 pub struct PgOrderRepository {
-    connection_pool: Pool<ConnectionManager<PgConnection>>,
+    pub connection_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
 impl domain::repositories::OrderRepository for PgOrderRepository {

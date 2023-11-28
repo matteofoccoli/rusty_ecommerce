@@ -6,5 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+domain = { path = "../domain" }
+adapters = { path = "../adapters" }
 actix-web = "4"
 serde = { version = "1.0.193", features = ["derive"] }
+diesel = { version = "2.1.0", features = ["postgres", "uuid", "r2d2"] }
