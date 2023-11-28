@@ -1,4 +1,4 @@
-use crate::domain::value_objects::{CustomerId, OrderId, OrderItem};
+use crate::value_objects::{CustomerId, OrderId, OrderItem};
 
 pub struct Order {
     pub id: OrderId,
@@ -29,7 +29,7 @@ impl Order {
 mod test {
     use uuid::Uuid;
 
-    use crate::domain::value_objects::{CustomerId, OrderId, OrderItem, ProductId};
+    use crate::value_objects::{CustomerId, OrderId, OrderItem, ProductId};
 
     use super::Order;
 

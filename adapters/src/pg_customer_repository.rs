@@ -3,10 +3,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     Insertable, QueryDsl, Queryable, RunQueryDsl, Selectable, SelectableHelper,
 };
-
 use uuid::Uuid;
-
-use crate::domain::*;
 
 #[derive(Queryable, Selectable, Insertable, Debug)]
 #[diesel(table_name = crate::schema::customers)]
@@ -33,10 +30,10 @@ pub struct PgCustomerRepository {
     connection_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
-impl From<Customer> for entities::customer::Customer {
+impl From<Customer> for domain::entities::customer::Customer {
     fn from(value: Customer) -> Self {
-        entities::customer::Customer {
-            id: value_objects::CustomerId(value.id),
+        domain::entities::customer::Customer {
+            id: domain::value_objects::CustomerId(value.id),
             first_name: value.first_name.clone(),
             last_name: value.last_name.clone(),
             address: value.address.into(),
@@ -44,9 +41,9 @@ impl From<Customer> for entities::customer::Customer {
     }
 }
 
-impl From<Address> for value_objects::Address {
+impl From<Address> for domain::value_objects::Address {
     fn from(value: Address) -> Self {
-        value_objects::Address {
+        domain::value_objects::Address {
             street: value.street,
             city: value.city,
             zip_code: value.zip_code,
@@ -55,11 +52,11 @@ impl From<Address> for value_objects::Address {
     }
 }
 
-impl repositories::CustomerRepository for PgCustomerRepository {
+impl domain::repositories::CustomerRepository for PgCustomerRepository {
     fn find_by_id(
         &self,
-        id: value_objects::CustomerId,
-    ) -> Result<Option<entities::customer::Customer>, String> {
+        id: domain::value_objects::CustomerId,
+    ) -> Result<Option<domain::entities::customer::Customer>, String> {
         use crate::schema::customers;
         match &mut self.connection_pool.get() {
             Ok(connection) => {
@@ -80,17 +77,17 @@ impl repositories::CustomerRepository for PgCustomerRepository {
 #[cfg(test)]
 mod test {
 
+    use crate::{
+        common,
+        pg_customer_repository::{Address, Customer, PgCustomerRepository},
+    };
     use diesel::{
         pg::PgConnection,
         r2d2::{ConnectionManager, Pool},
         RunQueryDsl,
     };
+    use domain::{repositories::CustomerRepository, value_objects::CustomerId};
     use uuid::Uuid;
-
-    use crate::{
-        adapter::{pg_customer_repository::{Address, Customer, PgCustomerRepository}, common},
-        domain::{repositories::CustomerRepository, value_objects::CustomerId},
-    };
 
     #[test]
     pub fn find_customer_by_id() {
@@ -98,8 +95,11 @@ mod test {
         let customer_id = save_a_customer_on_db(&connection_pool);
         let repository = PgCustomerRepository { connection_pool };
 
-        let customer = repository.find_by_id(CustomerId(customer_id)).unwrap().unwrap();
-        
+        let customer = repository
+            .find_by_id(CustomerId(customer_id))
+            .unwrap()
+            .unwrap();
+
         assert_eq!(CustomerId(customer_id), customer.id);
         assert_eq!("John", customer.first_name);
         assert_eq!("Appleseed", customer.last_name);
@@ -128,6 +128,4 @@ mod test {
             .expect("Error saving customer on DB");
         customer_id
     }
-
-    
 }

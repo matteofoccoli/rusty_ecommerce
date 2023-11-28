@@ -3,6 +3,16 @@
 version = 3
 
 [[package]]
+name = "adapters"
+version = "0.1.0"
+dependencies = [
+ "diesel",
+ "domain",
+ "dotenvy",
+ "uuid",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -82,6 +92,14 @@ name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
+
+[[package]]
+name = "domain"
+version = "0.1.0"
+dependencies = [
+ "mockall",
+ "uuid",
+]
 
 [[package]]
 name = "dotenvy"
@@ -382,16 +400,6 @@ name = "regex-syntax"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
-
-[[package]]
-name = "rusty_ecommerce"
-version = "0.1.0"
-dependencies = [
- "diesel",
- "dotenvy",
- "mockall",
- "uuid",
-]
 
 [[package]]
 name = "scheduled-thread-pool"

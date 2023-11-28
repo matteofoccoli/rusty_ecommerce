@@ -4,8 +4,6 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use crate::domain::*;
-
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::orders)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -18,8 +16,8 @@ pub struct PgOrderRepository {
     connection_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
-impl repositories::OrderRepository for PgOrderRepository {
-    fn save(&self, order: entities::order::Order) -> Result<entities::order::Order, String> {
+impl domain::repositories::OrderRepository for PgOrderRepository {
+    fn save(&self, order: domain::entities::order::Order) -> Result<domain::entities::order::Order, String> {
         use crate::schema::orders;
 
         match &mut self.connection_pool.get() {
@@ -42,12 +40,9 @@ impl repositories::OrderRepository for PgOrderRepository {
 
 #[cfg(test)]
 mod test {
+    use domain::repositories::OrderRepository;
     use uuid::Uuid;
-
-    use crate::{
-        adapter::common,
-        domain::{repositories::OrderRepository, *},
-    };
+    use crate::common;
 
     use super::PgOrderRepository;
 
@@ -55,9 +50,9 @@ mod test {
     fn save_a_new_order() {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
-        let order = entities::order::Order::create(
-            value_objects::OrderId(order_id),
-            value_objects::CustomerId(customer_id),
+        let order = domain::entities::order::Order::create(
+            domain::value_objects::OrderId(order_id),
+            domain::value_objects::CustomerId(customer_id),
         );
         let repository = PgOrderRepository {
             connection_pool: common::create_connection_pool(),

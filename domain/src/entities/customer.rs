@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::domain::value_objects::{Address, CustomerId};
+use crate::value_objects::{Address, CustomerId};
 
 pub struct Customer {
     pub id: CustomerId,
@@ -22,7 +22,7 @@ impl fmt::Display for Customer {
 #[cfg(test)]
 mod test {
 
-    use crate::domain::value_objects::{Address, CustomerId};
+    use crate::value_objects::{Address, CustomerId};
 
     use super::Customer;
     use uuid::Uuid;

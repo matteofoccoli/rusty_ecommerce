@@ -1,10 +1,6 @@
 use uuid::Uuid;
 
-use crate::domain::{
-    entities::order::Order,
-    repositories::{CustomerRepository, OrderRepository},
-    value_objects::{CustomerId, OrderId},
-};
+use crate::{repositories::{CustomerRepository, OrderRepository}, entities::order::Order, value_objects::{CustomerId, OrderId}};
 
 struct OrderService {
     pub customer_repository: Box<dyn CustomerRepository>,
@@ -34,7 +30,7 @@ mod test {
 
     use uuid::Uuid;
 
-    use crate::domain::{
+    use crate::{
         entities::{customer::Customer, order::Order},
         repositories::{MockCustomerRepository, MockOrderRepository},
         value_objects::{Address, CustomerId, OrderId},
