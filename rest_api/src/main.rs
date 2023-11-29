@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use rest_api::run;
+use rest_api::startup::run;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
