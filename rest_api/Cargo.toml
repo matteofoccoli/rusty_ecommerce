@@ -18,6 +18,15 @@ adapters = { path = "../adapters" }
 actix-web = "4"
 serde = { version = "1.0.193", features = ["derive"] }
 diesel = { version = "2.1.0", features = ["postgres", "uuid", "r2d2"] }
+config = "0.13.4"
 
 [dev-dependencies]
 reqwest = "0.11.22"
+
+[dev-dependencies.uuid]
+version = "1.6.1"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]

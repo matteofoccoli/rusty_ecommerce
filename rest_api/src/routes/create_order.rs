@@ -1,17 +1,21 @@
-use actix_web::{post, web, Responder, HttpResponse};
-use diesel::{r2d2::{ConnectionManager, Pool}, PgConnection};
+use actix_web::{post, web, HttpResponse, Responder};
+use diesel::{
+    r2d2::{ConnectionManager, Pool},
+    PgConnection,
+};
 use serde::{Deserialize, Serialize};
 
 #[post("/orders")]
-async fn create_order(data: web::Form<OrderData>) -> impl Responder {
-    let connection_pool = create_connection_pool();
-
+async fn create_order(
+    data: web::Form<OrderData>,
+    pool: web::Data<Pool<ConnectionManager<PgConnection>>>,
+) -> impl Responder {
     let customer_repository = adapters::pg_customer_repository::PgCustomerRepository {
-        connection_pool: connection_pool.clone(),
+        connection_pool: pool.get_ref().clone(),
     };
 
     let order_repository = adapters::pg_order_repository::PgOrderRepository {
-        connection_pool: connection_pool.clone(),
+        connection_pool: pool.get_ref().clone(),
     };
 
     let order_service = domain::services::order_service::OrderService {
@@ -26,15 +30,6 @@ async fn create_order(data: web::Form<OrderData>) -> impl Responder {
         }),
         Err(error_message) => HttpResponse::BadRequest().body(error_message),
     }
-}
-
-fn create_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
-    let db_url = "postgres://postgres@localhost/rusty_ecommerce";
-    let manager = ConnectionManager::<PgConnection>::new(db_url);
-    Pool::builder()
-        .test_on_check_out(true)
-        .build(manager)
-        .expect("Could not build connection pool")
 }
 
 #[derive(Deserialize)]
