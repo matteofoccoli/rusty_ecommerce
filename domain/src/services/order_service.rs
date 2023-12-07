@@ -1,6 +1,10 @@
 use uuid::Uuid;
 
-use crate::{repositories::{CustomerRepository, OrderRepository}, entities::order::Order, value_objects::{CustomerId, OrderId}};
+use crate::{
+    entities::order::Order,
+    repositories::{CustomerRepository, OrderRepository},
+    value_objects::{CustomerId, OrderId},
+};
 
 pub struct OrderService {
     pub customer_repository: Box<dyn CustomerRepository>,
@@ -9,8 +13,10 @@ pub struct OrderService {
 
 impl OrderService {
     pub fn create_order(&self, order_id: &str, customer_id: &str) -> Result<Order, String> {
-        let order_id = Uuid::parse_str(order_id).map_err(|_| "Unable to parse order id".to_string())?;
-        let customer_id = Uuid::parse_str(customer_id).map_err(|_| "Unable to parse customer id".to_string())?;
+        let order_id =
+            Uuid::parse_str(order_id).map_err(|_| "Unable to parse order id".to_string())?;
+        let customer_id =
+            Uuid::parse_str(customer_id).map_err(|_| "Unable to parse customer id".to_string())?;
         match self.customer_repository.find_by_id(CustomerId(customer_id)) {
             Ok(result) => match result {
                 Some(_) => {
@@ -59,7 +65,10 @@ mod test {
         assert!(result.is_ok());
         let order = result.unwrap();
         assert_eq!(OrderId(Uuid::parse_str(order_id).unwrap()), order.id);
-        assert_eq!(CustomerId(Uuid::parse_str(customer_id).unwrap()), order.customer_id);
+        assert_eq!(
+            CustomerId(Uuid::parse_str(customer_id).unwrap()),
+            order.customer_id
+        );
         assert_eq!(0, order.items.len());
     }
 

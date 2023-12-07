@@ -17,7 +17,10 @@ pub struct PgOrderRepository {
 }
 
 impl domain::repositories::OrderRepository for PgOrderRepository {
-    fn save(&self, order: domain::entities::order::Order) -> Result<domain::entities::order::Order, String> {
+    fn save(
+        &self,
+        order: domain::entities::order::Order,
+    ) -> Result<domain::entities::order::Order, String> {
         use crate::schema::orders;
 
         match &mut self.connection_pool.get() {
@@ -40,9 +43,9 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
 
 #[cfg(test)]
 mod test {
+    use crate::common;
     use domain::repositories::OrderRepository;
     use uuid::Uuid;
-    use crate::common;
 
     use super::PgOrderRepository;
 

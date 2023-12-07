@@ -22,6 +22,7 @@ config = "0.13.4"
 
 [dev-dependencies]
 reqwest = "0.11.22"
+diesel_migrations = "2.1.0"
 
 [dev-dependencies.uuid]
 version = "1.6.1"

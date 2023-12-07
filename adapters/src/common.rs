@@ -1,11 +1,11 @@
 #[cfg(test)]
 pub mod test {
-    use std::env;
     use diesel::{
         r2d2::{ConnectionManager, Pool},
         PgConnection,
     };
     use dotenvy::dotenv;
+    use std::env;
 
     pub(crate) fn create_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
         dotenv().ok();
