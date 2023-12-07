@@ -1,4 +1,4 @@
- # configuration.yaml
+ # settings.yaml
 application_port: 8080
 database:
   host: "127.0.0.1"

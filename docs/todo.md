@@ -4,8 +4,8 @@
 - [x] first commit on Github
 - [x] use Postgres
 - [x] expose API (rest or graphql)
-- [] implement integration test
-- [] use configuration object
+- [x] implement integration test
+- [x] use settings object
 - [] add status to Order
 - [] implement domain services using repository and domain logic
 - [] implement application services

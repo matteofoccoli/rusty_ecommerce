@@ -4,7 +4,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     Connection, PgConnection, RunQueryDsl,
 };
-use rest_api::configuration::{get_settings, Settings};
+use rest_api::settings::{get_settings, Settings};
 use uuid::Uuid;
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -39,7 +39,7 @@ impl Drop for TestContext {
 }
 
 fn setup_test_db(db_name: String) -> Pool<ConnectionManager<PgConnection>> {
-    let settings = get_settings().expect("Failed to read configuration");
+    let settings = get_settings().expect("Failed to read settings");
     create_test_db(&db_name, &settings);
     run_migrations_on_test_db(&db_name, &settings);
     create_connection_pool(&db_name, &settings)
@@ -82,7 +82,7 @@ fn get_test_db_url(settings: &Settings, db_name: &str) -> String {
 }
 
 fn drop_test_db(db_name: String) {
-    let config = get_settings().expect("Failed to read configuration");
+    let config = get_settings().expect("Failed to read settings");
     let mut connection =
         PgConnection::establish(&config.database.connection_string_without_db_name())
             .expect("Failed to connect to DB");
