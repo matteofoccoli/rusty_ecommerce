@@ -7,7 +7,7 @@
 - [x] implement integration test
 - [x] use settings object
 - [] add status to Order
-- [] implement domain services using repository and domain logic
+- [x] implement domain services using repository and domain logic
 - [] implement application services
 - [] use Docker
 - [] use Kafka

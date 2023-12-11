@@ -28,6 +28,25 @@ async fn create_an_order() {
     assert!(response.status().is_success());
 }
 
+#[actix_web::test]
+async fn return_error_if_customer_does_not_exist() {
+    let test_context = TestContext::new();
+    let client = reqwest::Client::new();
+    let order_id = Uuid::new_v4();
+    let customer_id = Uuid::new_v4();
+    let body = format!("order_id={}&customer_id={}", order_id, customer_id);
+
+    let response = client
+        .post(&format!("{}/orders", test_context.address))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
+        .await
+        .expect("Failed to create an order");
+
+    assert!(response.status().is_client_error());
+}
+
 fn insert_customer_on_db(
     customer_id: Uuid,
     connection_pool: Pool<ConnectionManager<PgConnection>>,
