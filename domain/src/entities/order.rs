@@ -3,7 +3,7 @@ use crate::value_objects::{CustomerId, OrderId, OrderItem};
 pub struct Order {
     pub id: OrderId,
     pub customer_id: CustomerId,
-    pub items: Vec<OrderItem>,
+    pub order_items: Vec<OrderItem>,
 }
 
 impl Order {
@@ -11,16 +11,26 @@ impl Order {
         Self {
             id,
             customer_id,
-            items: vec![],
+            order_items: vec![],
         }
     }
 
-    pub fn add(&mut self, item: OrderItem) {
-        self.items.push(item);
+    pub fn add(&mut self, order_item: OrderItem) {
+        self.order_items.push(order_item);
+    }
+
+    pub fn add_multiple(&mut self, order_items: Vec<OrderItem>) {
+        for order_item in order_items {
+            self.add(order_item)
+        }
     }
 
     pub fn total_price(self) -> f32 {
-        let total: f32 = self.items.iter().map(|x| x.price * x.quantity as f32).sum();
+        let total: f32 = self
+            .order_items
+            .iter()
+            .map(|x| x.price * x.quantity as f32)
+            .sum();
         (total * 100.0).round() / 100.0
     }
 }
@@ -48,19 +58,22 @@ mod test {
     fn add_items_to_order() {
         let mut order = order_fixture(Uuid::new_v4(), Uuid::new_v4());
 
-        order.add(order_item_fixture(9.99, 1, Uuid::new_v4()));
-        order.add(order_item_fixture(5.55, 2, Uuid::new_v4()));
-        order.add(order_item_fixture(7.77, 3, Uuid::new_v4()));
-
-        assert_eq!(3, order.items.len());
+        order.add_multiple(vec![
+            order_item_fixture(9.99, 1, Uuid::new_v4()),
+            order_item_fixture(5.55, 2, Uuid::new_v4()),
+            order_item_fixture(7.77, 3, Uuid::new_v4()),
+        ]);
+        assert_eq!(3, order.order_items.len());
     }
 
     #[test]
     fn calculate_total_price_of_an_order() {
         let mut order = order_fixture(Uuid::new_v4(), Uuid::new_v4());
 
-        order.add(order_item_fixture(9.99, 10, Uuid::new_v4()));
-        order.add(order_item_fixture(5.55, 2, Uuid::new_v4()));
+        order.add_multiple(vec![
+            order_item_fixture(9.99, 10, Uuid::new_v4()),
+            order_item_fixture(5.55, 2, Uuid::new_v4()),
+        ]);
 
         assert_eq!(111.0, order.total_price());
     }

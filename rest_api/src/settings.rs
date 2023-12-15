@@ -33,10 +33,7 @@ impl DatabaseSettings {
 
 pub fn get_settings() -> Result<Settings, config::ConfigError> {
     let settings = config::Config::builder()
-        .add_source(config::File::new(
-            "settings.yaml",
-            config::FileFormat::Yaml,
-        ))
+        .add_source(config::File::new("settings.yaml", config::FileFormat::Yaml))
         .build()?;
     settings.try_deserialize()
 }

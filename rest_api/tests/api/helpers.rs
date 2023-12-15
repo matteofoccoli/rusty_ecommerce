@@ -55,7 +55,8 @@ fn create_test_db(db_name: &str, settings: &Settings) {
 }
 
 fn run_migrations_on_test_db(db_name: &str, settings: &Settings) {
-    let mut connection = PgConnection::establish(&get_test_db_url(settings, db_name)).expect("Failed to connect to DB");
+    let mut connection = PgConnection::establish(&get_test_db_url(settings, db_name))
+        .expect("Failed to connect to DB");
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../adapters/migrations/");
     connection
         .run_pending_migrations(MIGRATIONS)

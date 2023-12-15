@@ -2,6 +2,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     Insertable, PgConnection, Queryable, RunQueryDsl, Selectable,
 };
+use domain::value_objects::OrderId;
 use uuid::Uuid;
 
 #[derive(Queryable, Selectable, Insertable)]
@@ -38,6 +39,17 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
             }
             Err(_) => Err("Error getting a DB connection from pool".to_string()),
         }
+    }
+
+    fn find_by_id(&self, _: OrderId) -> Result<Option<domain::entities::order::Order>, String> {
+        todo!()
+    }
+
+    fn update(
+        &self,
+        _: domain::entities::order::Order,
+    ) -> Result<domain::entities::order::Order, String> {
+        todo!()
     }
 }
 
