@@ -46,9 +46,9 @@ impl OrderService {
         let mut order = match self.order_repository.find_by_id(OrderId(order_id)) {
             Ok(option) => match option {
                 Some(order) => order,
-                None => todo!(),
+                None => return Err("Cannot find order".to_string()),
             },
-            Err(_) => todo!(),
+            Err(_) => return Err("Error reading order".to_string()),
         };
         order.add(OrderItem {
             price,
@@ -77,7 +77,7 @@ mod test {
     const PRODUCT_ID: &str = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
 
     #[test]
-    fn create_a_new_order() {
+    fn creates_an_order_for_a_customer() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Customer {
@@ -117,7 +117,7 @@ mod test {
     }
 
     #[test]
-    fn return_error_if_customer_does_not_exist() {
+    fn cannot_create_an_order_without_a_customer() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_find_by_id()
@@ -135,7 +135,7 @@ mod test {
     }
 
     #[test]
-    fn add_a_product_to_an_order() {
+    fn adds_a_product_to_an_order() {
         let mut order_repository = MockOrderRepository::new();
         order_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Order {
@@ -160,4 +160,34 @@ mod test {
 
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn cannot_add_a_product_to_a_not_existing_order() {
+        let mut order_repository = MockOrderRepository::new();
+        order_repository.expect_find_by_id().returning(|_| Ok(None));
+        let order_service = OrderService {
+            customer_repository: Box::new(MockCustomerRepository::new()),
+            order_repository: Box::new(order_repository),
+        };
+
+        let result = order_service.add_product(ORDER_ID, PRODUCT_ID, 10.0, 1);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn cannot_add_a_product_if_there_is_an_infrastructural_failure() {
+        let mut order_repository = MockOrderRepository::new();
+        order_repository.expect_find_by_id().returning(|_| Err("Error".to_string()));
+        let order_service = OrderService {
+            customer_repository: Box::new(MockCustomerRepository::new()),
+            order_repository: Box::new(order_repository)
+        };
+
+        let result = order_service.add_product(ORDER_ID, PRODUCT_ID, 10.0, 1);
+
+        assert!(result.is_err());
+    }
+
+
 }
