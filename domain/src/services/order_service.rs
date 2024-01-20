@@ -36,8 +36,8 @@ impl OrderService {
         &self,
         order_id: &str,
         product_id: &str,
-        price: f32,
-        quantity: u32,
+        price: f64,
+        quantity: i32,
     ) -> Result<Order, String> {
         let order_id =
             Uuid::parse_str(order_id).map_err(|_| "Unable to parse order id".to_string())?;

@@ -29,7 +29,7 @@ pub struct OrderId(pub Uuid);
 pub struct ProductId(pub Uuid);
 
 pub struct OrderItem {
-    pub price: f32,
-    pub quantity: u32,
+    pub price: f64,
+    pub quantity: i32,
     pub product_id: ProductId,
 }

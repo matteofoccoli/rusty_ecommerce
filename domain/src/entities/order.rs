@@ -25,11 +25,11 @@ impl Order {
         }
     }
 
-    pub fn total_price(self) -> f32 {
-        let total: f32 = self
+    pub fn total_price(self) -> f64 {
+        let total: f64 = self
             .order_items
             .iter()
-            .map(|x| x.price * x.quantity as f32)
+            .map(|x| x.price * x.quantity as f64)
             .sum();
         (total * 100.0).round() / 100.0
     }
@@ -82,7 +82,7 @@ mod test {
         Order::create(OrderId(id), CustomerId(customer_id))
     }
 
-    fn order_item_fixture(price: f32, quantity: u32, product_id: Uuid) -> OrderItem {
+    fn order_item_fixture(price: f64, quantity: i32, product_id: Uuid) -> OrderItem {
         OrderItem {
             price,
             quantity,
