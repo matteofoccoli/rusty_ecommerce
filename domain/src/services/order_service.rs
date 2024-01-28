@@ -43,9 +43,9 @@ impl OrderService {
         customer_id: &str,
     ) -> Result<Order, OrderServiceError> {
         let order_id =
-            Uuid::parse_str(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            Uuid::try_parse(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
         let customer_id =
-            Uuid::parse_str(customer_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            Uuid::try_parse(customer_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
 
         let customer = self
             .customer_repository
@@ -72,9 +72,9 @@ impl OrderService {
         quantity: i32,
     ) -> Result<Order, OrderServiceError> {
         let order_id =
-            Uuid::parse_str(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            Uuid::try_parse(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
         let product_id =
-            Uuid::parse_str(product_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            Uuid::try_parse(product_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
 
         let order = self
             .order_repository
@@ -117,7 +117,7 @@ mod test {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Customer {
-                id: CustomerId(Uuid::parse_str(CUSTOMER_ID).unwrap()),
+                id: CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
                 first_name: "Mario".to_string(),
                 last_name: "Luigi".to_string(),
                 address: Address {
@@ -131,8 +131,8 @@ mod test {
         let mut order_repository = MockOrderRepository::new();
         order_repository.expect_save().once().returning(move |_| {
             Ok(Order::create(
-                OrderId(Uuid::parse_str(ORDER_ID).unwrap()),
-                CustomerId(Uuid::parse_str(CUSTOMER_ID).unwrap()),
+                OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
+                CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
             ))
         });
         let order_service = OrderService {
@@ -144,9 +144,9 @@ mod test {
 
         assert!(result.is_ok());
         let order = result.unwrap();
-        assert_eq!(OrderId(Uuid::parse_str(ORDER_ID).unwrap()), order.id);
+        assert_eq!(OrderId(Uuid::try_parse(ORDER_ID).unwrap()), order.id);
         assert_eq!(
-            CustomerId(Uuid::parse_str(CUSTOMER_ID).unwrap()),
+            CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
             order.customer_id
         );
         assert_eq!(0, order.order_items.len());
@@ -175,14 +175,14 @@ mod test {
         let mut order_repository = MockOrderRepository::new();
         order_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Order {
-                id: OrderId(Uuid::parse_str(ORDER_ID).unwrap()),
+                id: OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
                 customer_id: CustomerId(Uuid::new_v4()),
                 order_items: vec![],
             }))
         });
         order_repository.expect_update().return_once(move |_| {
             Ok(Order {
-                id: OrderId(Uuid::parse_str(ORDER_ID).unwrap()),
+                id: OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
                 customer_id: CustomerId(Uuid::new_v4()),
                 order_items: vec![],
             })
