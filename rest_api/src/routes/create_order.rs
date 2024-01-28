@@ -28,7 +28,7 @@ async fn create_order(
             order_id: data.order_id.clone(),
             customer_id: data.customer_id.clone(),
         }),
-        Err(error_message) => HttpResponse::BadRequest().body(error_message),
+        Err(error) => HttpResponse::BadRequest().body(error.to_string()),
     }
 }
 

@@ -6,29 +6,61 @@ use crate::{
     value_objects::{CustomerId, OrderId, OrderItem, ProductId},
 };
 
+#[derive(Debug)]
+pub enum OrderServiceError {
+    CustomerNotFoundError,
+    CustomerNotReadError,
+    OrderNotFoundError,
+    OrderNotReadError,
+    OrderNotSavedError,
+    UuidNotParsedError,
+}
+
+impl std::fmt::Display for OrderServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OrderServiceError::CustomerNotFoundError => write!(f, "Customer not found error"),
+            OrderServiceError::CustomerNotReadError => write!(f, "Customer not read error"),
+            OrderServiceError::OrderNotFoundError => write!(f, "Order not found error"),
+            OrderServiceError::OrderNotReadError => write!(f, "Order not read error"),
+            OrderServiceError::OrderNotSavedError => write!(f, "Order not saved error"),
+            OrderServiceError::UuidNotParsedError => write!(f, "Uuid parse error"),
+        }
+    }
+}
+
+impl std::error::Error for OrderServiceError {}
+
 pub struct OrderService {
     pub customer_repository: Box<dyn CustomerRepository>,
     pub order_repository: Box<dyn OrderRepository>,
 }
 
 impl OrderService {
-    pub fn create_order(&self, order_id: &str, customer_id: &str) -> Result<Order, String> {
+    pub fn create_order(
+        &self,
+        order_id: &str,
+        customer_id: &str,
+    ) -> Result<Order, OrderServiceError> {
         let order_id =
-            Uuid::parse_str(order_id).map_err(|_| "Unable to parse order id".to_string())?;
+            Uuid::parse_str(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
         let customer_id =
-            Uuid::parse_str(customer_id).map_err(|_| "Unable to parse customer id".to_string())?;
-        match self.customer_repository.find_by_id(CustomerId(customer_id)) {
-            Ok(option) => match option {
-                Some(_) => {
-                    let order = Order::create(OrderId(order_id), CustomerId(customer_id));
-                    match self.order_repository.save(order) {
-                        Ok(order) => Ok(order),
-                        Err(_) => Err("Error saving order".to_string()),
-                    }
-                }
-                None => Err("Cannot find customer".to_string()),
-            },
-            Err(_) => Err("Error reading customer".to_string()),
+            Uuid::parse_str(customer_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+
+        let customer = self
+            .customer_repository
+            .find_by_id(CustomerId(customer_id))
+            .map_err(|_| OrderServiceError::CustomerNotReadError)?;
+
+        if customer.is_none() {
+            return Err(OrderServiceError::CustomerNotFoundError);
+        } else {
+            let order = Order::create(OrderId(order_id), CustomerId(customer_id));
+            let saved_order = self
+                .order_repository
+                .save(order)
+                .map_err(|_| OrderServiceError::OrderNotSavedError)?;
+            return Ok(saved_order);
         }
     }
 
@@ -38,24 +70,28 @@ impl OrderService {
         product_id: &str,
         price: f64,
         quantity: i32,
-    ) -> Result<Order, String> {
+    ) -> Result<Order, OrderServiceError> {
         let order_id =
-            Uuid::parse_str(order_id).map_err(|_| "Unable to parse order id".to_string())?;
+            Uuid::parse_str(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
         let product_id =
-            Uuid::parse_str(product_id).map_err(|_| "Unable to parse product id".to_string())?;
-        let mut order = match self.order_repository.find_by_id(OrderId(order_id)) {
-            Ok(option) => match option {
-                Some(order) => order,
-                None => return Err("Cannot find order".to_string()),
-            },
-            Err(_) => return Err("Error reading order".to_string()),
-        };
-        order.add(OrderItem {
-            price,
-            quantity,
-            product_id: ProductId(product_id),
-        });
-        self.order_repository.update(order)
+            Uuid::parse_str(product_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+
+        let order = self
+            .order_repository
+            .find_by_id(OrderId(order_id))
+            .map_err(|_| OrderServiceError::OrderNotReadError)?;
+
+        match order {
+            Some(mut order) => {
+                order.add(OrderItem {
+                    price,
+                    quantity,
+                    product_id: ProductId(product_id),
+                });
+                return self.order_repository.update(order).map_err(|_| OrderServiceError::OrderNotSavedError)
+            }
+            None => return Err(OrderServiceError::OrderNotFoundError),
+        }
     }
 }
 
@@ -178,16 +214,16 @@ mod test {
     #[test]
     fn cannot_add_a_product_if_there_is_an_infrastructural_failure() {
         let mut order_repository = MockOrderRepository::new();
-        order_repository.expect_find_by_id().returning(|_| Err("Error".to_string()));
+        order_repository
+            .expect_find_by_id()
+            .returning(|_| Err("Error".to_string()));
         let order_service = OrderService {
             customer_repository: Box::new(MockCustomerRepository::new()),
-            order_repository: Box::new(order_repository)
+            order_repository: Box::new(order_repository),
         };
 
         let result = order_service.add_product(ORDER_ID, PRODUCT_ID, 10.0, 1);
 
         assert!(result.is_err());
     }
-
-
 }
