@@ -28,8 +28,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    customers,
-    order_items,
-    orders,
-);
+diesel::allow_tables_to_appear_in_same_query!(customers, order_items, orders,);

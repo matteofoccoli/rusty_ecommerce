@@ -1,7 +1,7 @@
 use diesel::{
     r2d2::{ConnectionManager, Pool},
-    Insertable, PgConnection, QueryDsl, Queryable, RunQueryDsl, Selectable,
-    SelectableHelper, ExpressionMethods,
+    ExpressionMethods, Insertable, PgConnection, QueryDsl, Queryable, RunQueryDsl, Selectable,
+    SelectableHelper,
 };
 use domain::value_objects::OrderId;
 use uuid::Uuid;
@@ -67,8 +67,7 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
                     Ok(order) => {
                         let mut order: domain::entities::order::Order = order.into();
                         match order_items::dsl::order_items
-                            .filter(
-                                order_items::dsl::order_id.eq(searched_order_id))
+                            .filter(order_items::dsl::order_id.eq(searched_order_id))
                             .select(OrderItem::as_select())
                             .get_results(connection)
                         {

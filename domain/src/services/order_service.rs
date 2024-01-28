@@ -79,14 +79,18 @@ impl OrderService {
         match self
             .order_repository
             .find_by_id(OrderId(order_id))
-            .map_err(|_| OrderServiceError::OrderNotReadError)? {
+            .map_err(|_| OrderServiceError::OrderNotReadError)?
+        {
             Some(mut order) => {
                 order.add(OrderItem {
                     price,
                     quantity,
                     product_id: ProductId(product_id),
                 });
-                return self.order_repository.update(order).map_err(|_| OrderServiceError::OrderNotSavedError)
+                return self
+                    .order_repository
+                    .update(order)
+                    .map_err(|_| OrderServiceError::OrderNotSavedError);
             }
             None => return Err(OrderServiceError::OrderNotFoundError),
         }
