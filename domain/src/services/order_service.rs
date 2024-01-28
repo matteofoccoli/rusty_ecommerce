@@ -36,16 +36,27 @@ pub struct OrderService {
     pub order_repository: Box<dyn OrderRepository>,
 }
 
+pub struct AddProductRequestObject {
+    order_id: String,
+    product_id: String,
+    price: f64,
+    quantity: i32,
+}
+
+pub struct CreateOrderRequestObject {
+    pub order_id: String,
+    pub customer_id: String,
+}
+
 impl OrderService {
     pub fn create_order(
         &self,
-        order_id: &str,
-        customer_id: &str,
+        create_order: CreateOrderRequestObject,
     ) -> Result<Order, OrderServiceError> {
-        let order_id =
-            Uuid::try_parse(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
-        let customer_id =
-            Uuid::try_parse(customer_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+        let order_id = Uuid::try_parse(&create_order.order_id)
+            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
+        let customer_id = Uuid::try_parse(&create_order.customer_id)
+            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
 
         let customer = self
             .customer_repository
@@ -66,15 +77,12 @@ impl OrderService {
 
     pub fn add_product(
         &self,
-        order_id: &str,
-        product_id: &str,
-        price: f64,
-        quantity: i32,
+        add_product: AddProductRequestObject,
     ) -> Result<Order, OrderServiceError> {
-        let order_id =
-            Uuid::try_parse(order_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
-        let product_id =
-            Uuid::try_parse(product_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
+        let order_id = Uuid::try_parse(&add_product.order_id)
+            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
+        let product_id = Uuid::try_parse(&add_product.product_id)
+            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
 
         match self
             .order_repository
@@ -83,8 +91,8 @@ impl OrderService {
         {
             Some(mut order) => {
                 order.add(OrderItem {
-                    price,
-                    quantity,
+                    price: add_product.price,
+                    quantity: add_product.quantity,
                     product_id: ProductId(product_id),
                 });
                 return self
@@ -105,6 +113,7 @@ mod test {
     use crate::{
         entities::{customer::Customer, order::Order},
         repositories::{MockCustomerRepository, MockOrderRepository},
+        services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
         value_objects::{Address, CustomerId, OrderId},
     };
 
@@ -142,7 +151,10 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.create_order(ORDER_ID, CUSTOMER_ID);
+        let result = order_service.create_order(CreateOrderRequestObject {
+            order_id: ORDER_ID.to_string(),
+            customer_id: CUSTOMER_ID.to_string(),
+        });
 
         assert!(result.is_ok());
         let order = result.unwrap();
@@ -167,7 +179,10 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.create_order(ORDER_ID, CUSTOMER_ID);
+        let result = order_service.create_order(CreateOrderRequestObject {
+            order_id: ORDER_ID.to_string(),
+            customer_id: CUSTOMER_ID.to_string(),
+        });
 
         assert!(result.is_err());
     }
@@ -194,7 +209,12 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.add_product(ORDER_ID, PRODUCT_ID, 10.0, 1);
+        let result = order_service.add_product(AddProductRequestObject {
+            order_id: ORDER_ID.to_string(),
+            product_id: PRODUCT_ID.to_string(),
+            price: 10.0,
+            quantity: 1,
+        });
 
         assert!(result.is_ok());
     }
@@ -208,7 +228,12 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.add_product(ORDER_ID, PRODUCT_ID, 10.0, 1);
+        let result = order_service.add_product(AddProductRequestObject {
+            order_id: ORDER_ID.to_string(),
+            product_id: PRODUCT_ID.to_string(),
+            price: 10.0,
+            quantity: 1,
+        });
 
         assert!(result.is_err());
     }
@@ -224,7 +249,12 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.add_product(ORDER_ID, PRODUCT_ID, 10.0, 1);
+        let result = order_service.add_product(AddProductRequestObject {
+            order_id: ORDER_ID.to_string(),
+            product_id: PRODUCT_ID.to_string(),
+            price: 10.0,
+            quantity: 1,
+        });
 
         assert!(result.is_err());
     }
