@@ -76,12 +76,10 @@ impl OrderService {
         let product_id =
             Uuid::try_parse(product_id).map_err(|_| OrderServiceError::UuidNotParsedError)?;
 
-        let order = self
+        match self
             .order_repository
             .find_by_id(OrderId(order_id))
-            .map_err(|_| OrderServiceError::OrderNotReadError)?;
-
-        match order {
+            .map_err(|_| OrderServiceError::OrderNotReadError)? {
             Some(mut order) => {
                 order.add(OrderItem {
                     price,
