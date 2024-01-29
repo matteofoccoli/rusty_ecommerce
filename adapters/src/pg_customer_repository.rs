@@ -5,6 +5,8 @@ use diesel::{
 };
 use uuid::Uuid;
 
+use crate::schema;
+
 #[derive(Queryable, Selectable, Insertable, Debug)]
 #[diesel(table_name = crate::schema::customers)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -57,10 +59,9 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
         &self,
         id: domain::value_objects::CustomerId,
     ) -> Result<Option<domain::entities::customer::Customer>, String> {
-        use crate::schema::customers;
         match &mut self.connection_pool.get() {
             Ok(connection) => {
-                match customers::dsl::customers
+                match schema::customers::dsl::customers
                     .find(id.0)
                     .select(Customer::as_select())
                     .first(connection)
@@ -78,8 +79,7 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
 mod test {
 
     use crate::{
-        common,
-        pg_customer_repository::{Address, Customer, PgCustomerRepository},
+        common, pg_customer_repository::{Address, Customer, PgCustomerRepository}, schema
     };
     use diesel::{
         pg::PgConnection,
@@ -110,9 +110,8 @@ mod test {
     }
 
     fn save_a_customer_on_db(connection_pool: &Pool<ConnectionManager<PgConnection>>) -> Uuid {
-        use crate::schema::customers;
         let customer_id = Uuid::new_v4();
-        diesel::insert_into(customers::table)
+        diesel::insert_into(schema::customers::table)
             .values(&Customer {
                 id: customer_id,
                 first_name: "John".to_string(),
