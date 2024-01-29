@@ -9,13 +9,17 @@ use super::{
 
 #[derive(Debug)]
 pub enum CustomerRepositoryError {
+    CustomerNotFoundError,
     ConnectionNotCreatedError,
 }
 
 impl std::fmt::Display for CustomerRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CustomerRepositoryError::ConnectionNotCreatedError => write!(f, "Connection not created error"),
+            CustomerRepositoryError::ConnectionNotCreatedError => {
+                write!(f, "Connection not created error")
+            }
+            CustomerRepositoryError::CustomerNotFoundError => write!(f, "Customer not found error"),
         }
     }
 }
@@ -41,7 +45,9 @@ impl std::fmt::Display for OrderRepositoryError {
             OrderRepositoryError::OrderNotFoundError => write!(f, "Order not found error"),
             OrderRepositoryError::OrderNotReadError => write!(f, "Order not read error"),
             OrderRepositoryError::OrderNotSavedError => write!(f, "Order not saved error"),
-            OrderRepositoryError::ConnectionNotCreatedError => write!(f, "Connection not created error"),
+            OrderRepositoryError::ConnectionNotCreatedError => {
+                write!(f, "Connection not created error")
+            }
         }
     }
 }

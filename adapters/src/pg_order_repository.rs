@@ -31,7 +31,6 @@ pub struct PgOrderRepository {
 }
 
 impl domain::repositories::OrderRepository for PgOrderRepository {
-    
     fn save(
         &self,
         order: domain::entities::order::Order,
@@ -103,7 +102,8 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
 impl PgOrderRepository {
     fn create_connection(
         &self,
-    ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, OrderRepositoryError> {
+    ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, OrderRepositoryError>
+    {
         let connection = self
             .connection_pool
             .get()

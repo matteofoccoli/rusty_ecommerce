@@ -60,19 +60,29 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
         &self,
         id: domain::value_objects::CustomerId,
     ) -> Result<Option<domain::entities::customer::Customer>, CustomerRepositoryError> {
-        match &mut self.connection_pool.get() {
-            Ok(connection) => {
-                match schema::customers::dsl::customers
-                    .find(id.0)
-                    .select(Customer::as_select())
-                    .first(connection)
-                {
-                    Ok(customer) => Ok(Some(customer.into())),
-                    Err(_) => Ok(None),
-                }
-            }
-            Err(_) => Err(CustomerRepositoryError::ConnectionNotCreatedError),
-        }
+        let mut connection = self.create_connection()?;
+
+        let customer = schema::customers::dsl::customers
+            .find(id.0)
+            .select(Customer::as_select())
+            .first(&mut connection)
+            .map_err(|_| CustomerRepositoryError::CustomerNotFoundError)?;
+
+        Ok(Some(customer.into()))
+    }
+}
+
+impl PgCustomerRepository {
+    fn create_connection(
+        &self,
+    ) -> Result<
+        diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>,
+        CustomerRepositoryError,
+    > {
+        Ok(self
+            .connection_pool
+            .get()
+            .map_err(|_| CustomerRepositoryError::ConnectionNotCreatedError)?)
     }
 }
 
@@ -80,7 +90,9 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
 mod test {
 
     use crate::{
-        common, pg_customer_repository::{Address, Customer, PgCustomerRepository}, schema
+        common,
+        pg_customer_repository::{Address, Customer, PgCustomerRepository},
+        schema,
     };
     use diesel::{
         pg::PgConnection,

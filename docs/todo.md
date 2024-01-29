@@ -1,6 +1,6 @@
 # To Do
 
-- [] refactor pg_order_repository
+- [x] refactor pg_order_repository
 - [x] implement domain (entities)
 - [x] first commit on Github
 - [x] use Postgres
