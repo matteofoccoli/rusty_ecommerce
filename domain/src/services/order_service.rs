@@ -112,7 +112,7 @@ mod test {
 
     use crate::{
         entities::{customer::Customer, order::Order},
-        repositories::{MockCustomerRepository, MockOrderRepository},
+        repositories::{MockCustomerRepository, MockOrderRepository, OrderRepositoryError},
         services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
         value_objects::{Address, CustomerId, OrderId},
     };
@@ -243,7 +243,7 @@ mod test {
         let mut order_repository = MockOrderRepository::new();
         order_repository
             .expect_find_by_id()
-            .returning(|_| Err("Error".to_string()));
+            .returning(|_| Err(OrderRepositoryError::OrderNotFoundError));
         let order_service = OrderService {
             customer_repository: Box::new(MockCustomerRepository::new()),
             order_repository: Box::new(order_repository),

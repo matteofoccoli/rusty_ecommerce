@@ -3,7 +3,7 @@ use diesel::{
     ExpressionMethods, Insertable, PgConnection, QueryDsl, Queryable, RunQueryDsl, Selectable,
     SelectableHelper,
 };
-use domain::value_objects::OrderId;
+use domain::{repositories::OrderRepositoryError, value_objects::OrderId};
 use uuid::Uuid;
 
 use crate::schema;
@@ -35,7 +35,7 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
     fn save(
         &self,
         order: domain::entities::order::Order,
-    ) -> Result<domain::entities::order::Order, String> {
+    ) -> Result<domain::entities::order::Order, OrderRepositoryError> {
         let mut connection = self.create_connection()?;
         diesel::insert_into(schema::orders::table)
             .values(&Order {
@@ -43,14 +43,14 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
                 customer_id: order.customer_id.0,
             })
             .execute(&mut connection)
-            .map_err(|_| format!("Error saving order with id {} on DB", order.id.0))?;
+            .map_err(|_| OrderRepositoryError::OrderNotSavedError)?;
         Ok(order)
     }
 
     fn find_by_id(
         &self,
         searched_order_id: OrderId,
-    ) -> Result<Option<domain::entities::order::Order>, String> {
+    ) -> Result<Option<domain::entities::order::Order>, OrderRepositoryError> {
         let searched_order_id = searched_order_id.0;
 
         let mut connection = self.create_connection()?;
@@ -59,7 +59,7 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
             .find(searched_order_id)
             .select(Order::as_select())
             .first(&mut connection)
-            .map_err(|_| "Cannot find order for given id".to_string())?;
+            .map_err(|_| OrderRepositoryError::OrderNotFoundError)?;
 
         let mut order: domain::entities::order::Order = order.into();
 
@@ -82,7 +82,7 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
     fn update(
         &self,
         order: domain::entities::order::Order,
-    ) -> Result<domain::entities::order::Order, String> {
+    ) -> Result<domain::entities::order::Order, OrderRepositoryError> {
         let mut connection = self.create_connection()?;
 
         order.order_items.iter().for_each(|order_item| {
@@ -103,11 +103,11 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
 impl PgOrderRepository {
     fn create_connection(
         &self,
-    ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, String> {
+    ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, OrderRepositoryError> {
         let connection = self
             .connection_pool
             .get()
-            .map_err(|_| "Error getting a DB connection from pool".to_string())?;
+            .map_err(|_| OrderRepositoryError::ConnectionNotCreatedError)?;
         Ok(connection)
     }
 }
