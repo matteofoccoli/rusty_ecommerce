@@ -6,6 +6,8 @@ use diesel::{
 use domain::value_objects::OrderId;
 use uuid::Uuid;
 
+use crate::schema;
+
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::orders)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -29,92 +31,84 @@ pub struct PgOrderRepository {
 }
 
 impl domain::repositories::OrderRepository for PgOrderRepository {
+    
     fn save(
         &self,
         order: domain::entities::order::Order,
     ) -> Result<domain::entities::order::Order, String> {
-        use crate::schema::orders;
-        match &mut self.connection_pool.get() {
-            Ok(connection) => {
-                match diesel::insert_into(orders::table)
-                    .values(&Order {
-                        id: order.id.0,
-                        customer_id: order.customer_id.0,
-                    })
-                    .execute(connection)
-                {
-                    Ok(_) => Ok(order),
-                    Err(_) => Err(format!("Error saving order with id {} on DB", order.id.0)),
-                }
-            }
-            Err(_) => Err("Error getting a DB connection from pool".to_string()),
-        }
+        let mut connection = self.create_connection()?;
+        diesel::insert_into(schema::orders::table)
+            .values(&Order {
+                id: order.id.0,
+                customer_id: order.customer_id.0,
+            })
+            .execute(&mut connection)
+            .map_err(|_| format!("Error saving order with id {} on DB", order.id.0))?;
+        Ok(order)
     }
 
     fn find_by_id(
         &self,
         searched_order_id: OrderId,
     ) -> Result<Option<domain::entities::order::Order>, String> {
-        use crate::schema::{order_items, orders};
         let searched_order_id = searched_order_id.0;
-        match &mut self.connection_pool.get() {
-            Ok(connection) => {
-                match orders::dsl::orders
-                    .find(searched_order_id)
-                    .select(Order::as_select())
-                    .first(connection)
-                {
-                    Ok(order) => {
-                        let mut order: domain::entities::order::Order = order.into();
-                        match order_items::dsl::order_items
-                            .filter(order_items::dsl::order_id.eq(searched_order_id))
-                            .select(OrderItem::as_select())
-                            .get_results(connection)
-                        {
-                            Ok(order_items) => {
-                                for order_item in order_items.iter() {
-                                    println!("Adding order item");
-                                    order.add(domain::value_objects::OrderItem {
-                                        price: order_item.price,
-                                        quantity: order_item.quantity,
-                                        product_id: domain::value_objects::ProductId(
-                                            order_item.product_id,
-                                        ),
-                                    })
-                                }
-                            }
-                            _ => (),
-                        }
-                        Ok(Some(order))
-                    }
-                    Err(_) => Ok(None),
-                }
-            }
-            Err(_) => Err("Error getting a DB connection from pool".to_string()),
-        }
+
+        let mut connection = self.create_connection()?;
+
+        let order = schema::orders::dsl::orders
+            .find(searched_order_id)
+            .select(Order::as_select())
+            .first(&mut connection)
+            .map_err(|_| "Cannot find order for given id".to_string())?;
+
+        let mut order: domain::entities::order::Order = order.into();
+
+        if let Ok(order_items) = schema::order_items::dsl::order_items
+            .filter(schema::order_items::dsl::order_id.eq(searched_order_id))
+            .select(OrderItem::as_select())
+            .get_results(&mut connection)
+        {
+            order_items.iter().for_each(|order_item| {
+                order.add(domain::value_objects::OrderItem {
+                    price: order_item.price,
+                    quantity: order_item.quantity,
+                    product_id: domain::value_objects::ProductId(order_item.product_id),
+                })
+            });
+        };
+        Ok(Some(order))
     }
 
     fn update(
         &self,
         order: domain::entities::order::Order,
     ) -> Result<domain::entities::order::Order, String> {
-        use crate::schema::order_items;
-        match &mut self.connection_pool.get() {
-            Ok(connection) => {
-                for order_item in order.order_items.iter() {
-                    let _ = diesel::insert_into(order_items::table)
-                        .values(&OrderItem {
-                            order_id: order.id.0,
-                            product_id: order_item.product_id.0,
-                            price: order_item.price,
-                            quantity: order_item.quantity,
-                        })
-                        .execute(connection);
-                }
-            }
-            Err(_) => return Err("Error getting a DB connection from pool".to_string()),
-        }
+        let mut connection = self.create_connection()?;
+
+        order.order_items.iter().for_each(|order_item| {
+            let _ = diesel::insert_into(schema::order_items::table)
+                .values(&OrderItem {
+                    order_id: order.id.0,
+                    product_id: order_item.product_id.0,
+                    price: order_item.price,
+                    quantity: order_item.quantity,
+                })
+                .execute(&mut connection);
+        });
+
         Ok(order)
+    }
+}
+
+impl PgOrderRepository {
+    fn create_connection(
+        &self,
+    ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, String> {
+        let connection = self
+            .connection_pool
+            .get()
+            .map_err(|_| "Error getting a DB connection from pool".to_string())?;
+        Ok(connection)
     }
 }
 

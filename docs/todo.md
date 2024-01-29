@@ -1,5 +1,6 @@
 # To Do
 
+- [] refactor pg_order_repository
 - [x] implement domain (entities)
 - [x] first commit on Github
 - [x] use Postgres
@@ -8,7 +9,7 @@
 - [x] use settings object
 - [] add status to Order using an enumeration
 - [x] implement domain services using repository and domain logic
-- [] implement application services
+- [x] implement application services
 - [] use Docker
 - [] use Kafka
 - [] setup github actions 
@@ -20,7 +21,3 @@
 - [] outbox table pattern
 - [] use money to represent amount
 - [] Order line items as a type instead of a vector
-
-
-
-

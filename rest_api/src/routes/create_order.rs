@@ -24,12 +24,10 @@ async fn create_order(
         order_repository: Box::new(order_repository),
     };
 
-    match order_service.create_order(
-        CreateOrderRequestObject {
-            order_id: data.order_id.clone(),
-            customer_id: data.customer_id.clone()
-        }
-    ) {
+    match order_service.create_order(CreateOrderRequestObject {
+        order_id: data.order_id.clone(),
+        customer_id: data.customer_id.clone(),
+    }) {
         Ok(_) => HttpResponse::Ok().json(OrderResponse {
             order_id: data.order_id.clone(),
             customer_id: data.customer_id.clone(),
