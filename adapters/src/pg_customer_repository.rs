@@ -3,6 +3,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     Insertable, QueryDsl, Queryable, RunQueryDsl, Selectable, SelectableHelper,
 };
+use domain::repositories::CustomerRepositoryError;
 use uuid::Uuid;
 
 use crate::schema;
@@ -58,7 +59,7 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
     fn find_by_id(
         &self,
         id: domain::value_objects::CustomerId,
-    ) -> Result<Option<domain::entities::customer::Customer>, String> {
+    ) -> Result<Option<domain::entities::customer::Customer>, CustomerRepositoryError> {
         match &mut self.connection_pool.get() {
             Ok(connection) => {
                 match schema::customers::dsl::customers
@@ -70,7 +71,7 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
                     Err(_) => Ok(None),
                 }
             }
-            Err(_) => Err("Error getting a DB connection from pool".to_string()),
+            Err(_) => Err(CustomerRepositoryError::ConnectionNotCreatedError),
         }
     }
 }
