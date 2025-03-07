@@ -48,7 +48,7 @@ mod test {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
 
-        let order = order_fixture(order_id, customer_id);
+        let order = Order::create(OrderId(order_id), CustomerId(customer_id));
 
         assert_eq!(OrderId(order_id), order.id);
         assert_eq!(CustomerId(customer_id), order.customer_id);
@@ -56,37 +56,45 @@ mod test {
 
     #[test]
     fn add_items_to_order() {
-        let mut order = order_fixture(Uuid::new_v4(), Uuid::new_v4());
+        let mut order = Order::create(OrderId(Uuid::new_v4()), CustomerId(Uuid::new_v4()));
 
         order.add_multiple(vec![
-            order_item_fixture(9.99, 1, Uuid::new_v4()),
-            order_item_fixture(5.55, 2, Uuid::new_v4()),
-            order_item_fixture(7.77, 3, Uuid::new_v4()),
+            OrderItem {
+                price: 9.99,
+                quantity: 1,
+                product_id: ProductId(Uuid::new_v4()),
+            },
+            OrderItem {
+                price: 5.55,
+                quantity: 2,
+                product_id: ProductId(Uuid::new_v4()),
+            },
+            OrderItem {
+                price: 7.77,
+                quantity: 3,
+                product_id: ProductId(Uuid::new_v4()),
+            },
         ]);
         assert_eq!(3, order.order_items.len());
     }
 
     #[test]
     fn calculate_total_price_of_an_order() {
-        let mut order = order_fixture(Uuid::new_v4(), Uuid::new_v4());
+        let mut order = Order::create(OrderId(Uuid::new_v4()), CustomerId(Uuid::new_v4()));
 
         order.add_multiple(vec![
-            order_item_fixture(9.99, 10, Uuid::new_v4()),
-            order_item_fixture(5.55, 2, Uuid::new_v4()),
+            OrderItem {
+                price: 9.99,
+                quantity: 10,
+                product_id: ProductId(Uuid::new_v4()),
+            },
+            OrderItem {
+                price: 5.55,
+                quantity: 2,
+                product_id: ProductId(Uuid::new_v4()),
+            },
         ]);
 
         assert_eq!(111.0, order.total_price());
-    }
-
-    fn order_fixture(id: Uuid, customer_id: Uuid) -> Order {
-        Order::create(OrderId(id), CustomerId(customer_id))
-    }
-
-    fn order_item_fixture(price: f64, quantity: i32, product_id: Uuid) -> OrderItem {
-        OrderItem {
-            price,
-            quantity,
-            product_id: ProductId(product_id),
-        }
     }
 }

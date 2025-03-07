@@ -10,6 +10,7 @@
 - [] add status to Order using an enumeration
 - [x] implement domain services using repository and domain logic
 - [x] implement application services
+- [] create/drop test DB
 - [] use Docker
 - [] use Kafka
 - [] setup github actions 

@@ -13,7 +13,7 @@ pub enum OrderServiceError {
     OrderNotFoundError,
     OrderNotReadError,
     OrderNotSavedError,
-    UuidNotParsedError,
+    GenericError(String),
 }
 
 impl std::fmt::Display for OrderServiceError {
@@ -24,7 +24,7 @@ impl std::fmt::Display for OrderServiceError {
             OrderServiceError::OrderNotFoundError => write!(f, "Order not found error"),
             OrderServiceError::OrderNotReadError => write!(f, "Order not read error"),
             OrderServiceError::OrderNotSavedError => write!(f, "Order not saved error"),
-            OrderServiceError::UuidNotParsedError => write!(f, "Uuid parse error"),
+            OrderServiceError::GenericError(error) => write!(f, "Generic error: ${error}"),
         }
     }
 }
@@ -54,9 +54,9 @@ impl OrderService {
         create_order: CreateOrderRequestObject,
     ) -> Result<Order, OrderServiceError> {
         let order_id = Uuid::try_parse(&create_order.order_id)
-            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
         let customer_id = Uuid::try_parse(&create_order.customer_id)
-            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
 
         let customer = self
             .customer_repository
@@ -80,9 +80,9 @@ impl OrderService {
         add_product: AddProductRequestObject,
     ) -> Result<Order, OrderServiceError> {
         let order_id = Uuid::try_parse(&add_product.order_id)
-            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
         let product_id = Uuid::try_parse(&add_product.product_id)
-            .map_err(|_| OrderServiceError::UuidNotParsedError)?;
+            .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
 
         match self
             .order_repository
