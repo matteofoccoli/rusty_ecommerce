@@ -1,8 +1,8 @@
- # settings.yaml
+# settings.yaml
 application_port: 8080
 database:
   host: "127.0.0.1"
   port: 5432
-  username: "postgres"
-  password: ""
+  username: "foo"
+  password: "bar"
   database_name: "rusty_ecommerce"

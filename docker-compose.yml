@@ -5,6 +5,14 @@ networks:
 volumes:
   redpanda-0: null
 services:
+  postgres:
+    image: postgres:17.4
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=bar
+      - POSTGRES_USER=foo
+    ports: 
+    - 5432:5432
   redpanda-0:
     command:
       - redpanda
