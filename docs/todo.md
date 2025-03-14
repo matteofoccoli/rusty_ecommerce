@@ -7,9 +7,11 @@
 - [x] expose API (rest or graphql)
 - [x] implement integration test
 - [x] use settings object
-- [] add status to Order using an enumeration
 - [x] implement domain services using repository and domain logic
 - [x] implement application services
+- [] apply effective Rust learnings (chapters 1, 2, and 3)
+- [] switch to sqlx
+- [] add status to Order using an enumeration
 - [] create/drop test DB
 - [] use Docker
 - [] use Kafka

@@ -91,7 +91,7 @@ mod test {
 
     use crate::{
         common,
-        pg_customer_repository::{Address, Customer, PgCustomerRepository},
+        diesel::pg_customer_repository::{Address, Customer, PgCustomerRepository},
         schema,
     };
     use diesel::{

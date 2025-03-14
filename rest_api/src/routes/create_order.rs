@@ -11,11 +11,11 @@ async fn create_order(
     data: web::Form<OrderData>,
     pool: web::Data<Pool<ConnectionManager<PgConnection>>>,
 ) -> impl Responder {
-    let customer_repository = adapters::pg_customer_repository::PgCustomerRepository {
+    let customer_repository = adapters::diesel::pg_customer_repository::PgCustomerRepository {
         connection_pool: pool.get_ref().clone(),
     };
 
-    let order_repository = adapters::pg_order_repository::PgOrderRepository {
+    let order_repository = adapters::diesel::pg_order_repository::PgOrderRepository {
         connection_pool: pool.get_ref().clone(),
     };
 
