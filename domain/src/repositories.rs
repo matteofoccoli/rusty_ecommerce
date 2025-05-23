@@ -39,6 +39,7 @@ pub enum OrderRepositoryError {
     OrderNotFoundError,
     OrderNotReadError,
     OrderNotSavedError,
+    OrderItemsNotReadError,
     ConnectionNotCreatedError,
 }
 
@@ -50,6 +51,9 @@ impl std::fmt::Display for OrderRepositoryError {
             OrderRepositoryError::OrderNotSavedError => write!(f, "Order not saved error"),
             OrderRepositoryError::ConnectionNotCreatedError => {
                 write!(f, "Connection not created error")
+            }
+            OrderRepositoryError::OrderItemsNotReadError => {
+                write!(f, "Order items not read error")
             }
         }
     }
