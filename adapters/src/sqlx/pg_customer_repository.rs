@@ -17,7 +17,6 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
         id: CustomerId,
     ) -> Result<Option<Customer>, CustomerRepositoryError> {
         let uuid = id.0;
-        dbg!(uuid);
         let customer = sqlx::query("SELECT * FROM customers where id = $1")
             .bind(uuid)
             .map(|row: PgRow| Customer {
@@ -33,31 +32,27 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
             })
             .fetch_one(&self.pool)
             .await
-            .map_err(|e| {
-                dbg!(e);
-                return CustomerRepositoryError::CustomerNotFoundError;
-            })?;
+            .map_err(|_| CustomerRepositoryError::CustomerNotFoundError)?;
         return Ok(Some(customer));
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::env;
 
     use super::*;
+    use crate::common::test;
     use domain::{
         entities::customer::Customer,
         repositories::CustomerRepository,
         value_objects::{Address, CustomerId},
     };
-    use dotenvy::dotenv;
-    use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+    use sqlx::{Pool, Postgres};
     use uuid::Uuid;
 
     #[tokio::test]
     async fn find_customer_by_id() {
-        let pool = create_pool().await;
+        let pool = test::create_sqlx_connection_pool().await;
         let customer_id = save_a_customer_on_db(&pool).await;
         let repository = PgCustomerRepository { pool };
 
@@ -88,16 +83,6 @@ mod test {
                 state: "US".to_string(),
             },
         }
-    }
-
-    async fn create_pool() -> Pool<Postgres> {
-        dotenv().ok();
-        let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set!");
-        PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&db_url)
-            .await
-            .expect("Error connecting to DB")
     }
 
     async fn save_a_customer_on_db(pool: &Pool<Postgres>) -> Uuid {

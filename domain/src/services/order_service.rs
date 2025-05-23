@@ -49,7 +49,7 @@ pub struct CreateOrderRequestObject {
 }
 
 impl OrderService {
-    pub fn create_order(
+    pub async fn create_order(
         &self,
         create_order: CreateOrderRequestObject,
     ) -> Result<Order, OrderServiceError> {
@@ -61,6 +61,7 @@ impl OrderService {
         let customer = self
             .customer_repository
             .find_by_id(CustomerId(customer_id))
+            .await
             .map_err(|_| OrderServiceError::CustomerNotReadError)?;
 
         if customer.is_none() {
@@ -70,12 +71,13 @@ impl OrderService {
             let saved_order = self
                 .order_repository
                 .save(order)
+                .await
                 .map_err(|_| OrderServiceError::OrderNotSavedError)?;
             return Ok(saved_order);
         }
     }
 
-    pub fn add_product(
+    pub async fn add_product(
         &self,
         add_product: AddProductRequestObject,
     ) -> Result<Order, OrderServiceError> {
@@ -87,6 +89,7 @@ impl OrderService {
         match self
             .order_repository
             .find_by_id(OrderId(order_id))
+            .await
             .map_err(|_| OrderServiceError::OrderNotReadError)?
         {
             Some(mut order) => {
@@ -98,6 +101,7 @@ impl OrderService {
                 return self
                     .order_repository
                     .update(order)
+                    .await
                     .map_err(|_| OrderServiceError::OrderNotSavedError);
             }
             None => return Err(OrderServiceError::OrderNotFoundError),
@@ -123,8 +127,8 @@ mod test {
     const CUSTOMER_ID: &str = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
     const PRODUCT_ID: &str = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
 
-    #[test]
-    fn creates_an_order_for_a_customer() {
+    #[tokio::test]
+    async fn creates_an_order_for_a_customer() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Customer {
@@ -151,10 +155,12 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.create_order(CreateOrderRequestObject {
-            order_id: ORDER_ID.to_string(),
-            customer_id: CUSTOMER_ID.to_string(),
-        });
+        let result = order_service
+            .create_order(CreateOrderRequestObject {
+                order_id: ORDER_ID.to_string(),
+                customer_id: CUSTOMER_ID.to_string(),
+            })
+            .await;
 
         assert!(result.is_ok());
         let order = result.unwrap();
@@ -166,8 +172,8 @@ mod test {
         assert_eq!(0, order.order_items.len());
     }
 
-    #[test]
-    fn cannot_create_an_order_without_a_customer() {
+    #[tokio::test]
+    async fn cannot_create_an_order_without_a_customer() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_find_by_id()
@@ -179,16 +185,18 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.create_order(CreateOrderRequestObject {
-            order_id: ORDER_ID.to_string(),
-            customer_id: CUSTOMER_ID.to_string(),
-        });
+        let result = order_service
+            .create_order(CreateOrderRequestObject {
+                order_id: ORDER_ID.to_string(),
+                customer_id: CUSTOMER_ID.to_string(),
+            })
+            .await;
 
         assert!(result.is_err());
     }
 
-    #[test]
-    fn adds_a_product_to_an_order() {
+    #[tokio::test]
+    async fn adds_a_product_to_an_order() {
         let mut order_repository = MockOrderRepository::new();
         order_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Order {
@@ -209,18 +217,20 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.add_product(AddProductRequestObject {
-            order_id: ORDER_ID.to_string(),
-            product_id: PRODUCT_ID.to_string(),
-            price: 10.0,
-            quantity: 1,
-        });
+        let result = order_service
+            .add_product(AddProductRequestObject {
+                order_id: ORDER_ID.to_string(),
+                product_id: PRODUCT_ID.to_string(),
+                price: 10.0,
+                quantity: 1,
+            })
+            .await;
 
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn cannot_add_a_product_to_a_not_existing_order() {
+    #[tokio::test]
+    async fn cannot_add_a_product_to_a_not_existing_order() {
         let mut order_repository = MockOrderRepository::new();
         order_repository.expect_find_by_id().returning(|_| Ok(None));
         let order_service = OrderService {
@@ -228,18 +238,20 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.add_product(AddProductRequestObject {
-            order_id: ORDER_ID.to_string(),
-            product_id: PRODUCT_ID.to_string(),
-            price: 10.0,
-            quantity: 1,
-        });
+        let result = order_service
+            .add_product(AddProductRequestObject {
+                order_id: ORDER_ID.to_string(),
+                product_id: PRODUCT_ID.to_string(),
+                price: 10.0,
+                quantity: 1,
+            })
+            .await;
 
         assert!(result.is_err());
     }
 
-    #[test]
-    fn cannot_add_a_product_if_there_is_an_infrastructural_failure() {
+    #[tokio::test]
+    async fn cannot_add_a_product_if_there_is_an_infrastructural_failure() {
         let mut order_repository = MockOrderRepository::new();
         order_repository
             .expect_find_by_id()
@@ -249,12 +261,14 @@ mod test {
             order_repository: Box::new(order_repository),
         };
 
-        let result = order_service.add_product(AddProductRequestObject {
-            order_id: ORDER_ID.to_string(),
-            product_id: PRODUCT_ID.to_string(),
-            price: 10.0,
-            quantity: 1,
-        });
+        let result = order_service
+            .add_product(AddProductRequestObject {
+                order_id: ORDER_ID.to_string(),
+                product_id: PRODUCT_ID.to_string(),
+                price: 10.0,
+                quantity: 1,
+            })
+            .await;
 
         assert!(result.is_err());
     }

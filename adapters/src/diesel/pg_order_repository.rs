@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     ExpressionMethods, Insertable, PgConnection, QueryDsl, Queryable, RunQueryDsl, Selectable,
@@ -30,8 +31,9 @@ pub struct PgOrderRepository {
     pub connection_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
+#[async_trait]
 impl domain::repositories::OrderRepository for PgOrderRepository {
-    fn save(
+    async fn save(
         &self,
         order: domain::entities::order::Order,
     ) -> Result<domain::entities::order::Order, OrderRepositoryError> {
@@ -46,7 +48,7 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
         Ok(order)
     }
 
-    fn find_by_id(
+    async fn find_by_id(
         &self,
         searched_order_id: OrderId,
     ) -> Result<Option<domain::entities::order::Order>, OrderRepositoryError> {
@@ -78,7 +80,7 @@ impl domain::repositories::OrderRepository for PgOrderRepository {
         Ok(Some(order))
     }
 
-    fn update(
+    async fn update(
         &self,
         order: domain::entities::order::Order,
     ) -> Result<domain::entities::order::Order, OrderRepositoryError> {
@@ -130,8 +132,8 @@ mod test {
 
     use super::PgOrderRepository;
 
-    #[test]
-    fn saves_a_new_order() {
+    #[tokio::test]
+    async fn saves_a_new_order() {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
         let order = domain::entities::order::Order::create(
@@ -139,31 +141,34 @@ mod test {
             domain::value_objects::CustomerId(customer_id),
         );
         let repository = PgOrderRepository {
-            connection_pool: common::test::create_connection_pool(),
+            connection_pool: common::test::create_diesel_connection_pool(),
         };
 
-        let result = repository.save(order);
+        let result = repository.save(order).await;
 
         assert!(result.is_ok());
         let order_from_db = repository
             .find_by_id(domain::value_objects::OrderId(order_id))
+            .await
             .unwrap()
             .unwrap();
         assert_eq!(domain::value_objects::OrderId(order_id), order_from_db.id);
     }
 
-    #[test]
-    fn saves_order_items_for_an_order() {
+    #[tokio::test]
+    async fn saves_order_items_for_an_order() {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
         let product_id = Uuid::new_v4();
         let repository = PgOrderRepository {
-            connection_pool: common::test::create_connection_pool(),
+            connection_pool: common::test::create_diesel_connection_pool(),
         };
-        let _ = repository.save(domain::entities::order::Order::create(
-            domain::value_objects::OrderId(order_id),
-            domain::value_objects::CustomerId(customer_id),
-        ));
+        let _ = repository
+            .save(domain::entities::order::Order::create(
+                domain::value_objects::OrderId(order_id),
+                domain::value_objects::CustomerId(customer_id),
+            ))
+            .await;
 
         let mut order = domain::entities::order::Order::create(
             domain::value_objects::OrderId(order_id),
@@ -174,11 +179,12 @@ mod test {
             quantity: 1,
             product_id: domain::value_objects::ProductId(product_id),
         }]);
-        let result = repository.update(order);
+        let result = repository.update(order).await;
 
         assert!(result.is_ok());
         let order_from_db = repository
             .find_by_id(domain::value_objects::OrderId(order_id))
+            .await
             .unwrap()
             .unwrap();
         assert_eq!(1, order_from_db.order_items.len());

@@ -9,17 +9,17 @@
 - [x] use settings object
 - [x] implement domain services using repository and domain logic
 - [x] implement application services
-- [] apply effective Rust learnings (chapters 1, 2, and 3)
 - [] switch to sqlx
-- [] add status to Order using an enumeration
 - [] create/drop test DB
+- [] apply aggregate rules
+- [] apply effective Rust learnings (chapters 1, 2, and 3)
+- [] add status to Order using an enumeration
 - [] use Docker
 - [] use Kafka
 - [] setup github actions 
 - [] add linter
 - [] faster linking on Mac
 - [] optimistic locking an concurrency on entity root
-- [] apply aggregate rules
 - [] publish domain events
 - [] outbox table pattern
 - [] use money to represent amount

@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use mockall::automock;
 
 use crate::value_objects::OrderId;
@@ -27,8 +28,10 @@ impl std::fmt::Display for CustomerRepositoryError {
 impl std::error::Error for CustomerRepositoryError {}
 
 #[automock]
+#[async_trait]
 pub trait CustomerRepository {
-    fn find_by_id(&self, id: CustomerId) -> Result<Option<Customer>, CustomerRepositoryError>;
+    async fn find_by_id(&self, id: CustomerId)
+        -> Result<Option<Customer>, CustomerRepositoryError>;
 }
 
 #[derive(Debug)]
@@ -55,10 +58,11 @@ impl std::fmt::Display for OrderRepositoryError {
 impl std::error::Error for OrderRepositoryError {}
 
 #[automock]
+#[async_trait]
 pub trait OrderRepository {
-    fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError>;
+    async fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError>;
 
-    fn save(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+    async fn save(&self, order: Order) -> Result<Order, OrderRepositoryError>;
 
-    fn update(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+    async fn update(&self, order: Order) -> Result<Order, OrderRepositoryError>;
 }
