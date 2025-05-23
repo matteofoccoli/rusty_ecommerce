@@ -9,6 +9,13 @@ edition = "2021"
 domain = { path = "../domain" }
 diesel = { version = "2.1.0", features = ["postgres", "uuid", "r2d2"] }
 dotenvy = "0.15"
+tokio = { version = "1.44.1", features = ["full"] }
+sqlx = { version = "0.8.3", features = [
+    "postgres",
+    "runtime-tokio-native-tls",
+    "uuid",
+] }
+async-trait = "0.1.88"
 
 [dependencies.uuid]
 version = "1.6.1"

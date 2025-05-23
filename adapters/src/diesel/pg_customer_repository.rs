@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
@@ -55,8 +56,9 @@ impl From<Address> for domain::value_objects::Address {
     }
 }
 
+#[async_trait]
 impl domain::repositories::CustomerRepository for PgCustomerRepository {
-    fn find_by_id(
+    async fn find_by_id(
         &self,
         id: domain::value_objects::CustomerId,
     ) -> Result<Option<domain::entities::customer::Customer>, CustomerRepositoryError> {
@@ -102,14 +104,15 @@ mod test {
     use domain::{repositories::CustomerRepository, value_objects::CustomerId};
     use uuid::Uuid;
 
-    #[test]
-    pub fn find_customer_by_id() {
+    #[tokio::test]
+    async fn find_customer_by_id() {
         let connection_pool = common::test::create_connection_pool();
         let customer_id = save_a_customer_on_db(&connection_pool);
         let repository = PgCustomerRepository { connection_pool };
 
         let customer = repository
             .find_by_id(CustomerId(customer_id))
+            .await
             .unwrap()
             .unwrap();
 
