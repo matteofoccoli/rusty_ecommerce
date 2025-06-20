@@ -9,7 +9,9 @@
 - [x] use settings object
 - [x] implement domain services using repository and domain logic
 - [x] implement application services
-- [] switch to sqlx
+- [x] implement sqlx repositories
+- [] implement create customer endpoint
+- [] stop using diesel repositories in rest API
 - [] create/drop test DB
 - [] apply aggregate rules
 - [] apply effective Rust learnings (chapters 1, 2, and 3)

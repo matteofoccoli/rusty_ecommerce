@@ -6,7 +6,7 @@ use diesel::{
     PgConnection,
 };
 
-use crate::routes::{create_order, health_check};
+use crate::routes::{create_customer, create_order, health_check};
 
 pub fn run(
     listener: TcpListener,
@@ -17,6 +17,7 @@ pub fn run(
         App::new()
             .service(health_check)
             .service(create_order)
+            .service(create_customer)
             .app_data(connection.clone())
     })
     .listen(listener)?
