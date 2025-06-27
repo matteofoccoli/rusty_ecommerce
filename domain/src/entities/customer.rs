@@ -9,6 +9,17 @@ pub struct Customer {
     pub address: Address,
 }
 
+impl Customer {
+    pub fn new(id: CustomerId, first_name: String, last_name: String, address: Address) -> Self {
+        Self {
+            id,
+            first_name,
+            last_name,
+            address,
+        }
+    }
+}
+
 impl fmt::Display for Customer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

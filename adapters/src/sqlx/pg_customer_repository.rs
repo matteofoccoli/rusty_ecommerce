@@ -35,6 +35,10 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
             .map_err(|_| CustomerRepositoryError::CustomerNotFoundError)?;
         return Ok(Some(customer));
     }
+
+    async fn save(&self, customer: Customer) -> Result<Customer, CustomerRepositoryError> {
+        todo!();
+    }
 }
 
 #[cfg(test)]

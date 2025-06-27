@@ -32,6 +32,8 @@ impl std::error::Error for CustomerRepositoryError {}
 pub trait CustomerRepository {
     async fn find_by_id(&self, id: CustomerId)
         -> Result<Option<Customer>, CustomerRepositoryError>;
+
+    async fn save(&self, customer: Customer) -> Result<Customer, CustomerRepositoryError>;
 }
 
 #[derive(Debug)]

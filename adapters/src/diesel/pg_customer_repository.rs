@@ -72,6 +72,13 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
 
         Ok(Some(customer.into()))
     }
+
+    async fn save(
+        &self,
+        customer: domain::entities::customer::Customer,
+    ) -> Result<domain::entities::customer::Customer, CustomerRepositoryError> {
+        todo!();
+    }
 }
 
 impl PgCustomerRepository {
