@@ -68,19 +68,23 @@ mod test {
 
     use crate::{
         entities::customer::Customer,
-        repositories::MockCustomerRepository,
-        services::customer_service::{CreateCustomerRequestObject, CustomerService},
+        repositories::{CustomerRepositoryError, MockCustomerRepository},
+        services::customer_service::{
+            CreateCustomerRequestObject, CustomerService, CustomerServiceError,
+        },
         value_objects::{Address, CustomerId},
     };
+
+    const CUSTOMER_ID: &str = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
 
     #[tokio::test]
     async fn creates_a_customer() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_save()
-            .returning(|_| {
+            .returning(move |_| {
                 Ok(Customer {
-                    id: CustomerId(Uuid::new_v4()),
+                    id: CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
                     first_name: "my_customer_first_name".to_string(),
                     last_name: "my_customer_last_name".to_string(),
                     address: Address {
@@ -96,7 +100,36 @@ mod test {
         let customer_service = CustomerService {
             customer_repository: Box::new(customer_repository),
         };
-        let _ = customer_service
+        let saved_customer = customer_service
+            .create_customer(CreateCustomerRequestObject {
+                first_name: "my_customer_first_name".to_string(),
+                last_name: "my_customer_last_name".to_string(),
+                street: "my_customer_street".to_string(),
+                city: "my_customer_city".to_string(),
+                zip_code: "my_customer_zip_code".to_string(),
+                state: "my_customer_state".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(
+            CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
+            saved_customer.id
+        );
+    }
+
+    #[tokio::test]
+    async fn cannot_create_a_customer() {
+        let mut customer_repository = MockCustomerRepository::new();
+        customer_repository
+            .expect_save()
+            .returning(move |_| Err(CustomerRepositoryError::ConnectionNotCreatedError))
+            .once();
+
+        let customer_service = CustomerService {
+            customer_repository: Box::new(customer_repository),
+        };
+        let result = customer_service
             .create_customer(CreateCustomerRequestObject {
                 first_name: "my_customer_first_name".to_string(),
                 last_name: "my_customer_last_name".to_string(),
@@ -106,5 +139,10 @@ mod test {
                 state: "my_customer_state".to_string(),
             })
             .await;
+
+        assert!(matches!(
+            result,
+            Err(CustomerServiceError::CustomerNotSavedError)
+        ));
     }
 }
