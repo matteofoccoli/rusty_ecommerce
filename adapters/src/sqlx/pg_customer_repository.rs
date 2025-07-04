@@ -37,7 +37,31 @@ impl domain::repositories::CustomerRepository for PgCustomerRepository {
     }
 
     async fn save(&self, customer: Customer) -> Result<Customer, CustomerRepositoryError> {
-        todo!();
+        sqlx::query(
+            r#"
+        INSERT INTO customers (id, first_name, last_name, street, city, zip_code, state)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE
+        SET first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
+            street = EXCLUDED.street,
+            city = EXCLUDED.city,
+            zip_code = EXCLUDED.zip_code,
+            state = EXCLUDED.state
+        "#,
+        )
+        .bind(customer.id.0)
+        .bind(&customer.first_name)
+        .bind(&customer.last_name)
+        .bind(&customer.address.street)
+        .bind(&customer.address.city)
+        .bind(&customer.address.zip_code)
+        .bind(&customer.address.state)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| CustomerRepositoryError::ConnectionNotCreatedError)?;
+
+        Ok(customer)
     }
 }
 
@@ -51,14 +75,30 @@ mod test {
         repositories::CustomerRepository,
         value_objects::{Address, CustomerId},
     };
-    use sqlx::{Pool, Postgres};
     use uuid::Uuid;
+
+    #[tokio::test]
+    async fn save_customer() {
+        let pool = test::create_sqlx_connection_pool().await;
+
+        let repository = PgCustomerRepository { pool };
+
+        let customer_id = Uuid::new_v4();
+        let result = repository.save(create_sample_customer(customer_id)).await;
+
+        assert!(result.is_ok());
+    }
 
     #[tokio::test]
     async fn find_customer_by_id() {
         let pool = test::create_sqlx_connection_pool().await;
-        let customer_id = save_a_customer_on_db(&pool).await;
+        let customer_id = Uuid::new_v4();
+        let customer = create_sample_customer(customer_id);
         let repository = PgCustomerRepository { pool };
+        repository
+            .save(customer)
+            .await
+            .expect("Error saving customer");
 
         let customer = repository
             .find_by_id(CustomerId(customer_id))
@@ -89,26 +129,26 @@ mod test {
         }
     }
 
-    async fn save_a_customer_on_db(pool: &Pool<Postgres>) -> Uuid {
-        let customer_id = Uuid::new_v4();
-        let customer = create_sample_customer(customer_id);
+    // async fn save_a_customer_on_db(pool: &Pool<Postgres>) -> Uuid {
+    //     let customer_id = Uuid::new_v4();
+    //     let customer = create_sample_customer(customer_id);
 
-        sqlx::query(
-            r#"
-        INSERT INTO customers (id, first_name, last_name, street, city, zip_code, state) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-        )
-        .bind(customer.id.0)
-        .bind(customer.first_name)
-        .bind(customer.last_name)
-        .bind(customer.address.street)
-        .bind(customer.address.city)
-        .bind(customer.address.zip_code)
-        .bind(customer.address.state)
-        .execute(pool)
-        .await
-        .expect("Error saving test customer on DB");
+    //     sqlx::query(
+    //         r#"
+    //     INSERT INTO customers (id, first_name, last_name, street, city, zip_code, state)
+    //     VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+    //     )
+    //     .bind(customer.id.0)
+    //     .bind(customer.first_name)
+    //     .bind(customer.last_name)
+    //     .bind(customer.address.street)
+    //     .bind(customer.address.city)
+    //     .bind(customer.address.zip_code)
+    //     .bind(customer.address.state)
+    //     .execute(pool)
+    //     .await
+    //     .expect("Error saving test customer on DB");
 
-        customer_id
-    }
+    //     customer_id
+    // }
 }
