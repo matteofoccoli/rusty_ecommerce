@@ -1,22 +1,19 @@
 use actix_web::{post, web, HttpResponse, Responder};
-use diesel::{
-    r2d2::{ConnectionManager, Pool},
-    PgConnection,
-};
 use domain::services::order_service::CreateOrderRequestObject;
 use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Postgres};
 
 #[post("/orders")]
 async fn create_order(
     data: web::Form<OrderData>,
-    pool: web::Data<Pool<ConnectionManager<PgConnection>>>,
+    pool: web::Data<Pool<Postgres>>,
 ) -> impl Responder {
-    let customer_repository = adapters::diesel::pg_customer_repository::PgCustomerRepository {
-        connection_pool: pool.get_ref().clone(),
+    let customer_repository = adapters::sqlx::pg_customer_repository::PgCustomerRepository {
+        pool: pool.get_ref().clone(),
     };
 
-    let order_repository = adapters::diesel::pg_order_repository::PgOrderRepository {
-        connection_pool: pool.get_ref().clone(),
+    let order_repository = adapters::sqlx::pg_order_repository::PgOrderRepository {
+        pool: pool.get_ref().clone(),
     };
 
     let order_service = domain::services::order_service::OrderService {

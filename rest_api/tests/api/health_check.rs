@@ -2,7 +2,7 @@ use crate::helpers::TestContext;
 
 #[actix_web::test]
 async fn health_check_works() {
-    let test_context = TestContext::new();
+    let test_context = TestContext::new().await;
     let client = reqwest::Client::new();
 
     let response = client
