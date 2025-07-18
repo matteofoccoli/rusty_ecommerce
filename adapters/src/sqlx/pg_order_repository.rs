@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::{
     entities::order::Order,
-    repositories::OrderRepositoryError,
+    repositories::order_repository::OrderRepositoryError,
     value_objects::{CustomerId, OrderId, OrderItem, ProductId},
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -11,7 +11,7 @@ pub struct PgOrderRepository {
 }
 
 #[async_trait]
-impl domain::repositories::OrderRepository for PgOrderRepository {
+impl domain::repositories::order_repository::OrderRepository for PgOrderRepository {
     async fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError> {
         let uuid = id.0;
         let mut order = sqlx::query("SELECT * FROM orders where id = $1")
@@ -71,7 +71,7 @@ mod test {
 
     use super::*;
     use crate::common::test;
-    use domain::repositories::OrderRepository;
+    use domain::repositories::order_repository::OrderRepository;
     use uuid::Uuid;
 
     #[tokio::test]

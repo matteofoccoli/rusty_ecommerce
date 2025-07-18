@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use crate::{
     entities::customer::Customer,
-    repositories::CustomerRepository,
+    repositories::customer_repository::CustomerRepository,
     value_objects::{Address, CustomerId},
 };
 
@@ -68,7 +68,7 @@ mod test {
 
     use crate::{
         entities::customer::Customer,
-        repositories::{CustomerRepositoryError, MockCustomerRepository},
+        repositories::customer_repository::{CustomerRepositoryError, MockCustomerRepository},
         services::customer_service::{
             CreateCustomerRequestObject, CustomerService, CustomerServiceError,
         },

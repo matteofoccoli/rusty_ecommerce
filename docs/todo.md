@@ -10,18 +10,19 @@
 - [x] implement domain services using repository and domain logic
 - [x] implement application services
 - [x] implement sqlx repositories
-
-- [] implement create customer endpoint
-- [] publish domain events
+- [x] move rest api to sqlx
+- [x] implement create customer endpoint
+- [x] use Docker
+- [x] use Kafka
+- [] create Outbox entity
+- [] store Outbox entity
+- [] publish outbox content to Kafka
 - [] outbox table pattern
-
 - [] stop using diesel repositories in rest API
 - [] create/drop test DB
 - [] apply aggregate rules
 - [] apply effective Rust learnings (chapters 1, 2, and 3)
 - [] add status to Order using an enumeration
-- [x] use Docker
-- [x] use Kafka
 - [] setup github actions 
 - [] add linter
 - [] faster linking on Mac

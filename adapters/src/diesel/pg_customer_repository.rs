@@ -4,7 +4,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     Insertable, QueryDsl, Queryable, RunQueryDsl, Selectable, SelectableHelper,
 };
-use domain::repositories::CustomerRepositoryError;
+use domain::repositories::customer_repository::CustomerRepositoryError;
 use uuid::Uuid;
 
 use crate::schema;
@@ -57,7 +57,7 @@ impl From<Address> for domain::value_objects::Address {
 }
 
 #[async_trait]
-impl domain::repositories::CustomerRepository for PgCustomerRepository {
+impl domain::repositories::customer_repository::CustomerRepository for PgCustomerRepository {
     async fn find_by_id(
         &self,
         id: domain::value_objects::CustomerId,
@@ -108,7 +108,9 @@ mod test {
         r2d2::{ConnectionManager, Pool},
         RunQueryDsl,
     };
-    use domain::{repositories::CustomerRepository, value_objects::CustomerId};
+    use domain::{
+        repositories::customer_repository::CustomerRepository, value_objects::CustomerId,
+    };
     use uuid::Uuid;
 
     #[tokio::test]

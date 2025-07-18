@@ -2,7 +2,8 @@ use uuid::Uuid;
 
 use crate::{
     entities::order::Order,
-    repositories::{CustomerRepository, OrderRepository},
+    repositories::customer_repository::CustomerRepository,
+    repositories::order_repository::OrderRepository,
     value_objects::{CustomerId, OrderId, OrderItem, ProductId},
 };
 
@@ -116,7 +117,10 @@ mod test {
 
     use crate::{
         entities::{customer::Customer, order::Order},
-        repositories::{MockCustomerRepository, MockOrderRepository, OrderRepositoryError},
+        repositories::{
+            customer_repository::MockCustomerRepository,
+            order_repository::{MockOrderRepository, OrderRepositoryError},
+        },
         services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
         value_objects::{Address, CustomerId, OrderId},
     };

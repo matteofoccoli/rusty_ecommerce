@@ -4,7 +4,7 @@ use diesel::{
     ExpressionMethods, Insertable, PgConnection, QueryDsl, Queryable, RunQueryDsl, Selectable,
     SelectableHelper,
 };
-use domain::{repositories::OrderRepositoryError, value_objects::OrderId};
+use domain::{repositories::order_repository::OrderRepositoryError, value_objects::OrderId};
 use uuid::Uuid;
 
 use crate::schema;
@@ -32,7 +32,7 @@ pub struct PgOrderRepository {
 }
 
 #[async_trait]
-impl domain::repositories::OrderRepository for PgOrderRepository {
+impl domain::repositories::order_repository::OrderRepository for PgOrderRepository {
     async fn save(
         &self,
         order: domain::entities::order::Order,
@@ -127,7 +127,7 @@ impl From<Order> for domain::entities::order::Order {
 #[cfg(test)]
 mod test {
     use crate::common;
-    use domain::repositories::OrderRepository;
+    use domain::repositories::order_repository::OrderRepository;
     use uuid::Uuid;
 
     use super::PgOrderRepository;

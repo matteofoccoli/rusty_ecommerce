@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::{
     entities::customer::Customer,
-    repositories::CustomerRepositoryError,
+    repositories::customer_repository::CustomerRepositoryError,
     value_objects::{Address, CustomerId},
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -11,7 +11,7 @@ pub struct PgCustomerRepository {
 }
 
 #[async_trait]
-impl domain::repositories::CustomerRepository for PgCustomerRepository {
+impl domain::repositories::customer_repository::CustomerRepository for PgCustomerRepository {
     async fn find_by_id(
         &self,
         id: CustomerId,
@@ -72,7 +72,7 @@ mod test {
     use crate::common::test;
     use domain::{
         entities::customer::Customer,
-        repositories::CustomerRepository,
+        repositories::customer_repository::CustomerRepository,
         value_objects::{Address, CustomerId},
     };
     use uuid::Uuid;
