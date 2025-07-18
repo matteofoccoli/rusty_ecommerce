@@ -14,8 +14,11 @@
 - [x] implement create customer endpoint
 - [x] use Docker
 - [x] use Kafka
-- [] create Outbox entity
-- [] store Outbox entity
+- [x] create Outbox entity
+
+- [] WIP store Outbox entity
+
+- [] handle failures while starting/committing/rollbacking transaction 
 - [] publish outbox content to Kafka
 - [] outbox table pattern
 - [] stop using diesel repositories in rest API

@@ -12,9 +12,11 @@ async fn create_customer(
         pool: pool.get_ref().clone(),
     };
 
-    let customer_service = domain::services::customer_service::CustomerService {
-        customer_repository: Box::new(customer_repository),
-    };
+    let customer_service = domain::services::customer_service::CustomerService::new(
+        Box::new(customer_repository),
+        todo!(),
+        todo!(),
+    );
 
     match customer_service
         .create_customer(CreateCustomerRequestObject {

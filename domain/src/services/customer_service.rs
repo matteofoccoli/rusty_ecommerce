@@ -1,14 +1,19 @@
+use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    entities::customer::Customer,
-    repositories::customer_repository::CustomerRepository,
+    entities::{customer::Customer, outbox::OutboxMessage},
+    repositories::{
+        common_repository::CommonRepository, customer_repository::CustomerRepository,
+        outbox_repository::OutboxMessageRepository,
+    },
     value_objects::{Address, CustomerId},
 };
 
 #[derive(Debug)]
 pub enum CustomerServiceError {
     CustomerNotSavedError,
+    OutboxMessageNotSavedError,
     GenericError(String),
 }
 
@@ -16,6 +21,9 @@ impl std::fmt::Display for CustomerServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CustomerServiceError::CustomerNotSavedError => write!(f, "Customer not saved error"),
+            CustomerServiceError::OutboxMessageNotSavedError => {
+                write!(f, "Outbox message not saved error")
+            }
             CustomerServiceError::GenericError(error) => write!(f, "Generic error: ${error}"),
         }
     }
@@ -33,10 +41,23 @@ pub struct CreateCustomerRequestObject {
 }
 
 pub struct CustomerService {
-    pub customer_repository: Box<dyn CustomerRepository>,
+    customer_repository: Box<dyn CustomerRepository>,
+    outbox_message_repository: Box<dyn OutboxMessageRepository>,
+    common_repository: Box<dyn CommonRepository>,
 }
 
 impl CustomerService {
+    pub fn new(
+        customer_repository: Box<dyn CustomerRepository>,
+        outbox_message_repository: Box<dyn OutboxMessageRepository>,
+        common_repository: Box<dyn CommonRepository>,
+    ) -> Self {
+        Self {
+            customer_repository,
+            outbox_message_repository,
+            common_repository,
+        }
+    }
     pub async fn create_customer(
         &self,
         request: CreateCustomerRequestObject,
@@ -52,23 +73,51 @@ impl CustomerService {
         };
         let customer = Customer::new(customer_id, first_name, last_name, address);
 
-        let saved_customer = self
-            .customer_repository
-            .save(customer)
-            .await
-            .map_err(|_| CustomerServiceError::CustomerNotSavedError)?;
+        let _ = self.common_repository.begin_transaction().await;
 
+        let saved_customer = match self.customer_repository.save(customer).await {
+            Ok(customer) => customer,
+            Err(_) => {
+                let _ = self.common_repository.rollback_transaction().await;
+                return Err(CustomerServiceError::CustomerNotSavedError);
+            }
+        };
+
+        match self
+            .outbox_message_repository
+            .save(OutboxMessage {
+                id: Uuid::new_v4(),
+                event_type: "customer_created".to_string(),
+                event_payload: "customer_created_payload".to_string(),
+                created_at: Utc::now(),
+                processed_at: None,
+            })
+            .await
+        {
+            Ok(_) => (),
+            Err(_) => {
+                let _ = self.common_repository.rollback_transaction().await;
+                return Err(CustomerServiceError::OutboxMessageNotSavedError);
+            }
+        };
+
+        let _ = self.common_repository.commit_transaction().await;
         return Ok(saved_customer);
     }
 }
 
 #[cfg(test)]
 mod test {
+    use chrono::Utc;
     use uuid::Uuid;
 
     use crate::{
-        entities::customer::Customer,
-        repositories::customer_repository::{CustomerRepositoryError, MockCustomerRepository},
+        entities::{customer::Customer, outbox::OutboxMessage},
+        repositories::{
+            common_repository::MockCommonRepository,
+            customer_repository::{CustomerRepositoryError, MockCustomerRepository},
+            outbox_repository::{MockOutboxMessageRepository, OutboxMessageRepositoryError},
+        },
         services::customer_service::{
             CreateCustomerRequestObject, CustomerService, CustomerServiceError,
         },
@@ -78,37 +127,37 @@ mod test {
     const CUSTOMER_ID: &str = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
 
     #[tokio::test]
-    async fn creates_a_customer() {
+    async fn success() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_save()
-            .returning(move |_| {
-                Ok(Customer {
-                    id: CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
-                    first_name: "my_customer_first_name".to_string(),
-                    last_name: "my_customer_last_name".to_string(),
-                    address: Address {
-                        street: "my_customer_street".to_string(),
-                        city: "my_customer_city".to_string(),
-                        zip_code: "my_customer_zip_code".to_string(),
-                        state: "my_customer_state".to_string(),
-                    },
-                })
-            })
+            .returning(move |_| Ok(create_customer()))
             .once();
 
-        let customer_service = CustomerService {
-            customer_repository: Box::new(customer_repository),
-        };
+        let mut outbox_message_repository = MockOutboxMessageRepository::new();
+        outbox_message_repository
+            .expect_save()
+            .withf(|m| m.event_type == "customer_created".to_string() && m.processed_at.is_none())
+            .once()
+            .returning(move |_| Ok(create_outbox_message()));
+
+        let mut common_repository = MockCommonRepository::new();
+        common_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+        common_repository
+            .expect_commit_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        let customer_service = CustomerService::new(
+            Box::new(customer_repository),
+            Box::new(outbox_message_repository),
+            Box::new(common_repository),
+        );
         let saved_customer = customer_service
-            .create_customer(CreateCustomerRequestObject {
-                first_name: "my_customer_first_name".to_string(),
-                last_name: "my_customer_last_name".to_string(),
-                street: "my_customer_street".to_string(),
-                city: "my_customer_city".to_string(),
-                zip_code: "my_customer_zip_code".to_string(),
-                state: "my_customer_state".to_string(),
-            })
+            .create_customer(create_customer_request_object())
             .await
             .unwrap();
 
@@ -119,16 +168,30 @@ mod test {
     }
 
     #[tokio::test]
-    async fn cannot_create_a_customer() {
+    async fn error_while_saving_customer() {
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_save()
             .returning(move |_| Err(CustomerRepositoryError::ConnectionNotCreatedError))
             .once();
+        let outbox_message_repository = MockOutboxMessageRepository::new();
 
-        let customer_service = CustomerService {
-            customer_repository: Box::new(customer_repository),
-        };
+        let mut common_repository = MockCommonRepository::new();
+        common_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        common_repository
+            .expect_rollback_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        let customer_service = CustomerService::new(
+            Box::new(customer_repository),
+            Box::new(outbox_message_repository),
+            Box::new(common_repository),
+        );
         let result = customer_service
             .create_customer(CreateCustomerRequestObject {
                 first_name: "my_customer_first_name".to_string(),
@@ -144,5 +207,87 @@ mod test {
             result,
             Err(CustomerServiceError::CustomerNotSavedError)
         ));
+    }
+
+    #[tokio::test]
+    async fn error_while_saving_outbox_message() {
+        let mut customer_repository = MockCustomerRepository::new();
+        customer_repository
+            .expect_save()
+            .returning(move |_| Ok(create_customer()))
+            .once();
+
+        let mut outbox_message_repository = MockOutboxMessageRepository::new();
+        outbox_message_repository
+            .expect_save()
+            .returning(move |_| Err(OutboxMessageRepositoryError::OutboxMessageNotSavedError))
+            .once();
+
+        let mut common_repository = MockCommonRepository::new();
+        common_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        common_repository
+            .expect_rollback_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        let customer_service = CustomerService::new(
+            Box::new(customer_repository),
+            Box::new(outbox_message_repository),
+            Box::new(common_repository),
+        );
+        let result = customer_service
+            .create_customer(CreateCustomerRequestObject {
+                first_name: "my_customer_first_name".to_string(),
+                last_name: "my_customer_last_name".to_string(),
+                street: "my_customer_street".to_string(),
+                city: "my_customer_city".to_string(),
+                zip_code: "my_customer_zip_code".to_string(),
+                state: "my_customer_state".to_string(),
+            })
+            .await;
+
+        assert!(matches!(
+            result,
+            Err(CustomerServiceError::OutboxMessageNotSavedError)
+        ));
+    }
+
+    fn create_outbox_message() -> OutboxMessage {
+        OutboxMessage {
+            id: Uuid::new_v4(),
+            event_type: "customer_created".to_string(),
+            event_payload: "customer_created_payload".to_string(),
+            created_at: Utc::now(),
+            processed_at: None,
+        }
+    }
+
+    fn create_customer_request_object() -> CreateCustomerRequestObject {
+        CreateCustomerRequestObject {
+            first_name: "my_customer_first_name".to_string(),
+            last_name: "my_customer_last_name".to_string(),
+            street: "my_customer_street".to_string(),
+            city: "my_customer_city".to_string(),
+            zip_code: "my_customer_zip_code".to_string(),
+            state: "my_customer_state".to_string(),
+        }
+    }
+
+    fn create_customer() -> Customer {
+        Customer {
+            id: CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
+            first_name: "my_customer_first_name".to_string(),
+            last_name: "my_customer_last_name".to_string(),
+            address: Address {
+                street: "my_customer_street".to_string(),
+                city: "my_customer_city".to_string(),
+                zip_code: "my_customer_zip_code".to_string(),
+                state: "my_customer_state".to_string(),
+            },
+        }
     }
 }
