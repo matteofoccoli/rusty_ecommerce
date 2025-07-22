@@ -5,15 +5,13 @@ Exploring Redpanda: https://docs.redpanda.com/23.3/get-started/quick-start/#depl
 ## Run the application
 
 To create DB run `diesel setup`
-
 To create DB tables do: `DATABASE_URL=postgres://foo:bar@127.0.0.1/rusty_ecommerce sqlx migrate run`
-
 Then move to the `rest_api` folder and execute `cargo run`.
 
-## Tests
+## Adapters Unit Tests
 
-Run `cargo test` from the root
+To run tests in the adapters sub-project you need to have a running DB and apply migrations, move to the `adapters` folder and just run `sqlx database create` followed by `sqlx migrate run`. Then you can run `cargo test`.
 
-### Integrations Tests
+### Rest APIs Integrations Tests
 
-Integration tests automatically recreates DB and apply migrations
+Integration tests automatically recreates DB and apply migrations, just launch `cargo test` from the `rest_api` folder.
