@@ -6,6 +6,7 @@ use crate::{entities::customer::Customer, value_objects::CustomerId};
 #[derive(Debug)]
 pub enum CustomerRepositoryError {
     CustomerNotFoundError,
+    CustomerNotSavedError,
     ConnectionNotCreatedError,
 }
 
@@ -16,6 +17,7 @@ impl std::fmt::Display for CustomerRepositoryError {
                 write!(f, "Connection not created error")
             }
             CustomerRepositoryError::CustomerNotFoundError => write!(f, "Customer not found error"),
+            CustomerRepositoryError::CustomerNotSavedError => write!(f, "Customer not saved error"),
         }
     }
 }

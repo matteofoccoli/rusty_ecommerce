@@ -5,14 +5,14 @@ use crate::entities::outbox::OutboxMessage;
 
 #[derive(Debug)]
 pub enum OutboxMessageRepositoryError {
-    OutboxMessageNotSavedError,
+    OutboxMessageNotSavedError(String),
 }
 
 impl std::fmt::Display for OutboxMessageRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OutboxMessageRepositoryError::OutboxMessageNotSavedError => {
-                write!(f, "Outbox message not saved error")
+            OutboxMessageRepositoryError::OutboxMessageNotSavedError(message) => {
+                write!(f, "Outbox message not saved error {}", message)
             }
         }
     }

@@ -14,8 +14,10 @@ sqlx = { version = "0.8.3", features = [
     "postgres",
     "runtime-tokio-native-tls",
     "uuid",
+    "chrono",
 ] }
 async-trait = "0.1.88"
+chrono = "0.4.41"
 
 [dependencies.uuid]
 version = "1.6.1"

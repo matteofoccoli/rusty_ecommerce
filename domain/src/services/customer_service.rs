@@ -220,7 +220,11 @@ mod test {
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository
             .expect_save()
-            .returning(move |_| Err(OutboxMessageRepositoryError::OutboxMessageNotSavedError))
+            .returning(move |_| {
+                Err(OutboxMessageRepositoryError::OutboxMessageNotSavedError(
+                    "Database error".to_string(),
+                ))
+            })
             .once();
 
         let mut common_repository = MockCommonRepository::new();

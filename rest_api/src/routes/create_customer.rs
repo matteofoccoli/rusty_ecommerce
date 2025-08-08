@@ -11,11 +11,16 @@ async fn create_customer(
     let customer_repository = adapters::sqlx::pg_customer_repository::PgCustomerRepository {
         pool: pool.get_ref().clone(),
     };
+    let outbox_message_repository =
+        adapters::sqlx::pg_outbox_message_repository::PgOutboxMessageRepository {
+            pool: pool.get_ref().clone(),
+        };
+    let common_repository = adapters::sqlx::pg_common_repository::PgCommonRepository;
 
     let customer_service = domain::services::customer_service::CustomerService::new(
         Box::new(customer_repository),
-        todo!(),
-        todo!(),
+        Box::new(outbox_message_repository),
+        Box::new(common_repository),
     );
 
     match customer_service

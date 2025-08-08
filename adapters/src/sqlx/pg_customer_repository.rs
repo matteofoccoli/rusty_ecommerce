@@ -59,7 +59,7 @@ impl domain::repositories::customer_repository::CustomerRepository for PgCustome
         .bind(&customer.address.state)
         .execute(&self.pool)
         .await
-        .map_err(|_| CustomerRepositoryError::ConnectionNotCreatedError)?;
+        .map_err(|_| CustomerRepositoryError::CustomerNotSavedError)?;
 
         Ok(customer)
     }

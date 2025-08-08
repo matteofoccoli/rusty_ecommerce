@@ -17,6 +17,7 @@
 - [x] create Outbox entity
 
 - [] WIP store Outbox entity
+- [] Implement PG common repository
 
 - [] handle failures while starting/committing/rollbacking transaction 
 - [] publish outbox content to Kafka
