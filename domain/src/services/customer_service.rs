@@ -88,7 +88,7 @@ impl CustomerService {
             .save(OutboxMessage {
                 id: Uuid::new_v4(),
                 event_type: "customer_created".to_string(),
-                event_payload: "customer_created_payload".to_string(),
+                event_payload: self.create_event_payload(&saved_customer),
                 created_at: Utc::now(),
                 processed_at: None,
             })
@@ -103,6 +103,19 @@ impl CustomerService {
 
         let _ = self.common_repository.commit_transaction().await;
         return Ok(saved_customer);
+    }
+
+    fn create_event_payload(&self, saved_customer: &Customer) -> String {
+        format!(
+            r#"{{
+                id: {},
+                first_name: {},
+                last_name: {}
+            }}"#,
+            saved_customer.id.0.to_string(),
+            saved_customer.first_name,
+            saved_customer.last_name
+        )
     }
 }
 
