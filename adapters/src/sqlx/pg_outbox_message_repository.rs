@@ -22,10 +22,10 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
             VALUES ($1, $2, $3, $4) 
         "#,
         )
-        .bind(&message.id)
-        .bind(&message.event_type)
-        .bind(&message.event_payload)
-        .bind(&message.created_at)
+        .bind(&message.id())
+        .bind(&message.event_type())
+        .bind(&message.event_payload())
+        .bind(&message.created_at())
         .execute(&self.pool)
         .await
         .map_err(|error| {
@@ -38,9 +38,10 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
 
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
     use domain::{
-        entities::outbox::OutboxMessage, repositories::outbox_repository::OutboxMessageRepository,
+        entities::{customer::Customer, outbox::OutboxMessage},
+        repositories::outbox_repository::OutboxMessageRepository,
+        value_objects::{Address, CustomerId},
     };
     use uuid::Uuid;
 
@@ -51,13 +52,18 @@ mod test {
         let pool = test::create_sqlx_connection_pool().await;
         let repository = PgOutboxMessageRepository { pool };
 
-        let message = OutboxMessage {
-            id: Uuid::new_v4(),
-            event_type: "event_type".to_string(),
-            event_payload: "event_payload".to_string(),
-            created_at: Utc::now(),
-            processed_at: None,
+        let customer = Customer {
+            id: CustomerId(Uuid::new_v4()),
+            first_name: "my_customer_first_name".to_string(),
+            last_name: "my_customer_last_name".to_string(),
+            address: Address {
+                street: "my_customer_street".to_string(),
+                city: "my_customer_city".to_string(),
+                zip_code: "my_customer_zip_code".to_string(),
+                state: "my_customer_state".to_string(),
+            },
         };
+        let message = OutboxMessage::customer_created_event(&customer);
 
         let result = repository.save(message).await;
 

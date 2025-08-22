@@ -1,5 +1,3 @@
-use chrono::Utc;
-use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
@@ -47,16 +45,7 @@ pub struct CustomerService {
     common_repository: Box<dyn CommonRepository>,
 }
 
-#[derive(Serialize)]
-pub struct CustomerCreatedEvent {
-    id: String,
-    first_name: String,
-    last_name: String,
-}
-
 impl CustomerService {
-    pub const CUSTOMER_CREATED_EVENT: &'static str = "customer_created";
-
     pub fn new(
         customer_repository: Box<dyn CustomerRepository>,
         outbox_message_repository: Box<dyn OutboxMessageRepository>,
@@ -96,13 +85,7 @@ impl CustomerService {
 
         match self
             .outbox_message_repository
-            .save(OutboxMessage {
-                id: Uuid::new_v4(),
-                event_type: Self::CUSTOMER_CREATED_EVENT.to_string(),
-                event_payload: self.create_event_payload(&saved_customer),
-                created_at: Utc::now(),
-                processed_at: None,
-            })
+            .save(OutboxMessage::customer_created_event(&saved_customer))
             .await
         {
             Ok(_) => (),
@@ -115,20 +98,10 @@ impl CustomerService {
         let _ = self.common_repository.commit_transaction().await;
         return Ok(saved_customer);
     }
-
-    fn create_event_payload(&self, saved_customer: &Customer) -> String {
-        let customer_created_event = CustomerCreatedEvent {
-            id: saved_customer.id.0.to_string(),
-            first_name: saved_customer.first_name.clone(),
-            last_name: saved_customer.last_name.clone(),
-        };
-        dbg!(serde_json::to_string(&customer_created_event).unwrap())
-    }
 }
 
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
     use uuid::Uuid;
 
     use crate::{
@@ -148,25 +121,26 @@ mod test {
 
     #[tokio::test]
     async fn success() {
-        let customer = create_customer();
-        let expected_event_payload = create_expexted_event_payload(&customer);
+        let saved_customer = create_customer();
+        let saved_outbox_message = OutboxMessage::customer_created_event(&saved_customer);
+        let expected_event_payload = saved_outbox_message.event_payload();
 
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_save()
-            .return_once(|_| Ok(customer))
-            .once();
+            .once()
+            .return_once(|_| Ok(saved_customer));
 
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository
             .expect_save()
             .withf(move |m| {
-                m.event_type == "customer_created".to_string()
-                    && m.processed_at.is_none()
-                    && m.event_payload == expected_event_payload
+                m.event_type() == "customer_created".to_string()
+                    && m.processed_at().is_none()
+                    && m.event_payload() == expected_event_payload
             })
             .once()
-            .returning(move |_| Ok(create_outbox_message()));
+            .return_once(|_| Ok(saved_outbox_message));
 
         let mut common_repository = MockCommonRepository::new();
         common_repository
@@ -287,16 +261,6 @@ mod test {
         ));
     }
 
-    fn create_outbox_message() -> OutboxMessage {
-        OutboxMessage {
-            id: Uuid::new_v4(),
-            event_type: "customer_created".to_string(),
-            event_payload: "customer_created_payload".to_string(),
-            created_at: Utc::now(),
-            processed_at: None,
-        }
-    }
-
     fn create_customer_request_object() -> CreateCustomerRequestObject {
         CreateCustomerRequestObject {
             first_name: "my_customer_first_name".to_string(),
@@ -320,14 +284,5 @@ mod test {
                 state: "my_customer_state".to_string(),
             },
         }
-    }
-
-    fn create_expexted_event_payload(customer: &Customer) -> String {
-        format!(
-            r#"{{"id":"{}","first_name":"{}","last_name":"{}"}}"#,
-            customer.id.0.to_string(),
-            customer.first_name,
-            customer.last_name
-        )
     }
 }
