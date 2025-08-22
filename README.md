@@ -10,6 +10,8 @@ Then move to the `rest_api` folder and execute `cargo run`.
 
 ## Adapters Unit Tests
 
+Start required containers with `docker compose up -d`
+
 To run tests in the adapters sub-project you need to have a running DB and apply migrations, move to the `adapters` folder and just run `sqlx database create` followed by `sqlx migrate run`. Then you can run `cargo test`.
 
 ### Rest APIs Integrations Tests

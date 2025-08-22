@@ -128,16 +128,23 @@ mod test {
 
     #[tokio::test]
     async fn success() {
+        let customer = create_customer();
+        let expected_event_payload = create_expexted_event_payload(&customer);
+
         let mut customer_repository = MockCustomerRepository::new();
         customer_repository
             .expect_save()
-            .returning(move |_| Ok(create_customer()))
+            .return_once(|_| Ok(customer))
             .once();
 
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository
             .expect_save()
-            .withf(|m| m.event_type == "customer_created".to_string() && m.processed_at.is_none())
+            .withf(move |m| {
+                m.event_type == "customer_created".to_string()
+                    && m.processed_at.is_none()
+                    && m.event_payload == expected_event_payload
+            })
             .once()
             .returning(move |_| Ok(create_outbox_message()));
 
@@ -293,5 +300,18 @@ mod test {
                 state: "my_customer_state".to_string(),
             },
         }
+    }
+
+    fn create_expexted_event_payload(customer: &Customer) -> String {
+        format!(
+            r#"{{
+                id: {},
+                first_name: {},
+                last_name: {}
+            }}"#,
+            customer.id.0.to_string(),
+            customer.first_name,
+            customer.last_name
+        )
     }
 }
