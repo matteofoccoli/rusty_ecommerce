@@ -1,4 +1,5 @@
 use chrono::Utc;
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
@@ -46,7 +47,16 @@ pub struct CustomerService {
     common_repository: Box<dyn CommonRepository>,
 }
 
+#[derive(Serialize)]
+pub struct CustomerCreatedEvent {
+    id: String,
+    first_name: String,
+    last_name: String,
+}
+
 impl CustomerService {
+    pub const CUSTOMER_CREATED_EVENT: &'static str = "customer_created";
+
     pub fn new(
         customer_repository: Box<dyn CustomerRepository>,
         outbox_message_repository: Box<dyn OutboxMessageRepository>,
@@ -58,6 +68,7 @@ impl CustomerService {
             common_repository,
         }
     }
+
     pub async fn create_customer(
         &self,
         request: CreateCustomerRequestObject,
@@ -87,7 +98,7 @@ impl CustomerService {
             .outbox_message_repository
             .save(OutboxMessage {
                 id: Uuid::new_v4(),
-                event_type: "customer_created".to_string(),
+                event_type: Self::CUSTOMER_CREATED_EVENT.to_string(),
                 event_payload: self.create_event_payload(&saved_customer),
                 created_at: Utc::now(),
                 processed_at: None,
@@ -106,16 +117,12 @@ impl CustomerService {
     }
 
     fn create_event_payload(&self, saved_customer: &Customer) -> String {
-        format!(
-            r#"{{
-                id: {},
-                first_name: {},
-                last_name: {}
-            }}"#,
-            saved_customer.id.0.to_string(),
-            saved_customer.first_name,
-            saved_customer.last_name
-        )
+        let customer_created_event = CustomerCreatedEvent {
+            id: saved_customer.id.0.to_string(),
+            first_name: saved_customer.first_name.clone(),
+            last_name: saved_customer.last_name.clone(),
+        };
+        dbg!(serde_json::to_string(&customer_created_event).unwrap())
     }
 }
 
@@ -317,11 +324,7 @@ mod test {
 
     fn create_expexted_event_payload(customer: &Customer) -> String {
         format!(
-            r#"{{
-                id: {},
-                first_name: {},
-                last_name: {}
-            }}"#,
+            r#"{{"id":"{}","first_name":"{}","last_name":"{}"}}"#,
             customer.id.0.to_string(),
             customer.first_name,
             customer.last_name
