@@ -16,10 +16,12 @@ impl domain::repositories::order_repository::OrderRepository for PgOrderReposito
         let uuid = id.0;
         let mut order = sqlx::query("SELECT * FROM orders where id = $1")
             .bind(uuid)
-            .map(|row: PgRow| Order {
-                id: OrderId(uuid),
-                customer_id: CustomerId(row.try_get("customer_id").unwrap_or_default()),
-                order_items: vec![],
+            .try_map(|row: PgRow| {
+                Ok(Order {
+                    id: OrderId(uuid),
+                    customer_id: CustomerId(row.try_get("customer_id")?),
+                    order_items: vec![],
+                })
             })
             .fetch_one(&self.pool)
             .await
@@ -27,10 +29,12 @@ impl domain::repositories::order_repository::OrderRepository for PgOrderReposito
 
         let order_items = sqlx::query("SELECT * FROM order_items WHERE order_id = $1")
             .bind(uuid)
-            .map(|row: PgRow| OrderItem {
-                price: row.try_get("price").unwrap_or_default(),
-                quantity: row.try_get("quantity").unwrap_or_default(),
-                product_id: ProductId(row.try_get("product_id").unwrap_or_default()),
+            .try_map(|row: PgRow| {
+                Ok(OrderItem {
+                    price: row.try_get("price")?,
+                    quantity: row.try_get("quantity")?,
+                    product_id: ProductId(row.try_get("product_id")?),
+                })
             })
             .fetch_all(&self.pool)
             .await

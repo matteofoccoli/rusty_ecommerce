@@ -14,6 +14,22 @@ pub struct OutboxMessage {
 }
 
 impl OutboxMessage {
+    pub fn new(
+        id: Uuid,
+        event_type: String,
+        event_payload: String,
+        created_at: DateTime<Utc>,
+        processed_at: Option<DateTime<Utc>>,
+    ) -> Self {
+        Self {
+            id,
+            event_type,
+            event_payload,
+            created_at,
+            processed_at,
+        }
+    }
+
     pub fn customer_created_event(customer: &Customer) -> OutboxMessage {
         OutboxMessage {
             id: Uuid::new_v4(),

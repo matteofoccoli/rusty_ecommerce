@@ -19,16 +19,18 @@ impl domain::repositories::customer_repository::CustomerRepository for PgCustome
         let uuid = id.0;
         let customer = sqlx::query("SELECT * FROM customers where id = $1")
             .bind(uuid)
-            .map(|row: PgRow| Customer {
-                id: CustomerId(uuid),
-                first_name: row.try_get("first_name").unwrap_or_default(),
-                last_name: row.try_get("last_name").unwrap_or_default(),
-                address: Address {
-                    street: row.try_get("street").unwrap_or_default(),
-                    city: row.try_get("city").unwrap_or_default(),
-                    zip_code: row.try_get("zip_code").unwrap_or_default(),
-                    state: row.try_get("state").unwrap_or_default(),
-                },
+            .try_map(|row: PgRow| {
+                Ok(Customer {
+                    id: CustomerId(uuid),
+                    first_name: row.try_get("first_name")?,
+                    last_name: row.try_get("last_name")?,
+                    address: Address {
+                        street: row.try_get("street")?,
+                        city: row.try_get("city")?,
+                        zip_code: row.try_get("zip_code")?,
+                        state: row.try_get("state")?,
+                    },
+                })
             })
             .fetch_one(&self.pool)
             .await

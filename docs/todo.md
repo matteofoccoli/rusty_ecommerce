@@ -15,10 +15,13 @@
 - [x] use Docker
 - [x] use Kafka
 - [x] create Outbox entity
+- [X] WIP store Outbox entity
+- [x] Read messages from outbox
+- [x] Avoid unwrap or default when reading from the repository
 
-- [] WIP store Outbox entity
+- [] Handle processed at
+- [] Isolate DB test execution (DB should be reinitialized!)
 - [] Implement PG common repository
-
 - [] handle failures while starting/committing/rollbacking transaction 
 - [] publish outbox content to Kafka
 - [] outbox table pattern

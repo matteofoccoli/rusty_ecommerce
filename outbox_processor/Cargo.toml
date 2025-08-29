@@ -1,0 +1,10 @@
+[package]
+name = "outbox_processor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+adapters = { path = "../adapters" }
+sqlx = { version = "0.8.6", features = ["postgres"] }
+tokio = { version = "1.47.1", features = ["full"] }

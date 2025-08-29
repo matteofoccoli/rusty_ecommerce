@@ -17,3 +17,7 @@ To run tests in the adapters sub-project you need to have a running DB and apply
 ### Rest APIs Integrations Tests
 
 Integration tests automatically recreates DB and apply migrations, just launch `cargo test` from the `rest_api` folder.
+
+### Process Outbox
+
+Just run the outbox processor via `cargo run -p outbox_processor` from the workspace root.

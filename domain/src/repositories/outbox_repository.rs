@@ -6,6 +6,7 @@ use crate::entities::outbox::OutboxMessage;
 #[derive(Debug)]
 pub enum OutboxMessageRepositoryError {
     OutboxMessageNotSavedError(String),
+    OutboxMessagesNotReadError,
 }
 
 impl std::fmt::Display for OutboxMessageRepositoryError {
@@ -13,6 +14,9 @@ impl std::fmt::Display for OutboxMessageRepositoryError {
         match self {
             OutboxMessageRepositoryError::OutboxMessageNotSavedError(message) => {
                 write!(f, "Outbox message not saved error {}", message)
+            }
+            OutboxMessageRepositoryError::OutboxMessagesNotReadError => {
+                write!(f, "Outbox messages not read error")
             }
         }
     }
@@ -27,4 +31,8 @@ pub trait OutboxMessageRepository {
         &self,
         message: OutboxMessage,
     ) -> Result<OutboxMessage, OutboxMessageRepositoryError>;
+
+    async fn find_not_sent(
+        &self,
+    ) -> Result<Option<Vec<OutboxMessage>>, OutboxMessageRepositoryError>;
 }

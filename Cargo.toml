@@ -1,8 +1,4 @@
 [workspace]
 resolver = "2"
 
-members = [
-    "domain",
-    "adapters",
-    "rest_api"
-]
+members = ["domain", "adapters", "rest_api", "outbox_processor"]

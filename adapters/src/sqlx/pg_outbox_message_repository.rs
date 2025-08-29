@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use domain::{
     entities::outbox::OutboxMessage, repositories::outbox_repository::OutboxMessageRepositoryError,
 };
-use sqlx::{Pool, Postgres};
+use sqlx::{postgres::PgRow, Pool, Postgres, Row};
+use uuid::Uuid;
 
 pub struct PgOutboxMessageRepository {
     pub pool: Pool<Postgres>,
@@ -34,6 +35,30 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
 
         Ok(message)
     }
+
+    async fn find_not_sent(
+        &self,
+    ) -> Result<Option<Vec<OutboxMessage>>, OutboxMessageRepositoryError> {
+        let messages = sqlx::query("SELECT * FROM outbox_messages")
+            .try_map(|row: PgRow| {
+                let id: Uuid = row.try_get("id")?;
+                let event_type = row.try_get("event_type")?;
+                let event_payload = row.try_get("event_payload")?;
+                let created_at = row.try_get("created_at")?;
+                Ok(OutboxMessage::new(
+                    id,
+                    event_type,
+                    event_payload,
+                    created_at,
+                    None,
+                ))
+            })
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|_| OutboxMessageRepositoryError::OutboxMessagesNotReadError)?;
+
+        Ok(Some(messages))
+    }
 }
 
 #[cfg(test)]
@@ -48,11 +73,33 @@ mod test {
     use crate::{common::test, sqlx::pg_outbox_message_repository::PgOutboxMessageRepository};
 
     #[tokio::test]
-    async fn save_outbox_message() {
+    async fn save_message() {
         let pool = test::create_sqlx_connection_pool().await;
         let repository = PgOutboxMessageRepository { pool };
 
-        let customer = Customer {
+        let message = OutboxMessage::customer_created_event(&create_customer());
+        let result = repository.save(message).await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn find_not_sent_messages() {
+        let pool = test::create_sqlx_connection_pool().await;
+        let repository = PgOutboxMessageRepository { pool };
+        let message = OutboxMessage::customer_created_event(&create_customer());
+        repository
+            .save(message)
+            .await
+            .expect("Error saving messages during test setup");
+
+        let result = repository.find_not_sent().await.unwrap().unwrap();
+
+        assert!(result.len() > 0);
+    }
+
+    fn create_customer() -> Customer {
+        Customer {
             id: CustomerId(Uuid::new_v4()),
             first_name: "my_customer_first_name".to_string(),
             last_name: "my_customer_last_name".to_string(),
@@ -62,11 +109,6 @@ mod test {
                 zip_code: "my_customer_zip_code".to_string(),
                 state: "my_customer_state".to_string(),
             },
-        };
-        let message = OutboxMessage::customer_created_event(&customer);
-
-        let result = repository.save(message).await;
-
-        assert!(result.is_ok());
+        }
     }
 }
