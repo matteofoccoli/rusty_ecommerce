@@ -19,14 +19,15 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
     ) -> Result<OutboxMessage, OutboxMessageRepositoryError> {
         sqlx::query(
             r#"
-            INSERT INTO outbox_messages (id, event_type, event_payload, created_at)
-            VALUES ($1, $2, $3, $4) 
+            INSERT INTO outbox_messages (id, event_type, event_payload, created_at, processed_at)
+            VALUES ($1, $2, $3, $4, $5) 
         "#,
         )
         .bind(&message.id())
         .bind(&message.event_type())
         .bind(&message.event_payload())
         .bind(&message.created_at())
+        .bind(&message.processed_at())
         .execute(&self.pool)
         .await
         .map_err(|error| {
@@ -39,18 +40,19 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
     async fn find_not_sent(
         &self,
     ) -> Result<Option<Vec<OutboxMessage>>, OutboxMessageRepositoryError> {
-        let messages = sqlx::query("SELECT * FROM outbox_messages")
+        let messages = sqlx::query("SELECT * FROM outbox_messages WHERE processed_at IS NULL")
             .try_map(|row: PgRow| {
                 let id: Uuid = row.try_get("id")?;
                 let event_type = row.try_get("event_type")?;
                 let event_payload = row.try_get("event_payload")?;
                 let created_at = row.try_get("created_at")?;
+                let processed_at = row.try_get("processed_at")?;
                 Ok(OutboxMessage::new(
                     id,
                     event_type,
                     event_payload,
                     created_at,
-                    None,
+                    processed_at,
                 ))
             })
             .fetch_all(&self.pool)
@@ -63,6 +65,7 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
 
 #[cfg(test)]
 mod test {
+    use chrono::Utc;
     use domain::{
         entities::{customer::Customer, outbox::OutboxMessage},
         repositories::outbox_repository::OutboxMessageRepository,
@@ -84,18 +87,38 @@ mod test {
     }
 
     #[tokio::test]
-    async fn find_not_sent_messages() {
-        let pool = test::create_sqlx_connection_pool().await;
-        let repository = PgOutboxMessageRepository { pool };
+    async fn find_unsent_messages() {
+        let repository = PgOutboxMessageRepository {
+            pool: test::create_sqlx_connection_pool().await,
+        };
+        let unsent_message = persist_unsent_message(&repository).await;
+        let sent_message = persist_sent_message(&repository).await;
+
+        let unsent_messages = repository.find_not_sent().await.unwrap().unwrap();
+
+        assert!(unsent_messages
+            .iter()
+            .any(|m| m.id() == unsent_message.id()));
+        assert!(!unsent_messages.iter().any(|m| m.id() == sent_message.id()));
+    }
+
+    async fn persist_unsent_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
         let message = OutboxMessage::customer_created_event(&create_customer());
         repository
-            .save(message)
+            .save(message.clone())
             .await
             .expect("Error saving messages during test setup");
+        message
+    }
 
-        let result = repository.find_not_sent().await.unwrap().unwrap();
-
-        assert!(result.len() > 0);
+    async fn persist_sent_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
+        let mut message = OutboxMessage::customer_created_event(&create_customer());
+        message.set_processed_at(Utc::now());
+        repository
+            .save(message.clone())
+            .await
+            .expect("Error saving messages during test setup");
+        message
     }
 
     fn create_customer() -> Customer {

@@ -57,6 +57,10 @@ impl OutboxMessage {
     pub fn processed_at(&self) -> Option<DateTime<Utc>> {
         self.processed_at
     }
+
+    pub fn set_processed_at(&mut self, processed_at: DateTime<Utc>) {
+        self.processed_at = Some(processed_at);
+    }
 }
 
 #[derive(Serialize)]
