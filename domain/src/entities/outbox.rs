@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::entities::customer::Customer;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OutboxMessage {
     id: Uuid,
     event_type: String,

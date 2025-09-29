@@ -20,6 +20,8 @@
 - [x] Avoid unwrap or default when reading from the repository
 - [x] Handle processed at
 
+- [] Process outbox messages
+
 - [] Isolate DB test execution (DB should be reinitialized!)
 - [] Implement PG common repository
 - [] handle failures while starting/committing/rollbacking transaction 
