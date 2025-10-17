@@ -32,7 +32,13 @@ pub trait OutboxMessageRepository {
         message: OutboxMessage,
     ) -> Result<OutboxMessage, OutboxMessageRepositoryError>;
 
-    async fn find_not_sent(
+    async fn find_unprocessed(
         &self,
     ) -> Result<Option<Vec<OutboxMessage>>, OutboxMessageRepositoryError>;
+
+    async fn set_processed(
+        &self,
+        message_id: uuid::Uuid,
+        processed_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), OutboxMessageRepositoryError>;
 }

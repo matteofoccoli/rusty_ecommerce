@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use domain::{
     entities::outbox::OutboxMessage, repositories::outbox_repository::OutboxMessageRepositoryError,
 };
@@ -37,7 +38,7 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
         Ok(message)
     }
 
-    async fn find_not_sent(
+    async fn find_unprocessed(
         &self,
     ) -> Result<Option<Vec<OutboxMessage>>, OutboxMessageRepositoryError> {
         let messages = sqlx::query("SELECT * FROM outbox_messages WHERE processed_at IS NULL")
@@ -60,6 +61,29 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
             .map_err(|_| OutboxMessageRepositoryError::OutboxMessagesNotReadError)?;
 
         Ok(Some(messages))
+    }
+
+    async fn set_processed(
+        &self,
+        message_id: Uuid,
+        processed_at: DateTime<Utc>,
+    ) -> Result<(), OutboxMessageRepositoryError> {
+        sqlx::query(
+            r#"
+            UPDATE outbox_messages
+            SET processed_at = $2
+            WHERE id = $1
+        "#,
+        )
+        .bind(&message_id)
+        .bind(&Some(processed_at))
+        .execute(&self.pool)
+        .await
+        .map_err(|error| {
+            OutboxMessageRepositoryError::OutboxMessageNotSavedError(error.to_string())
+        })?;
+
+        Ok(())
     }
 }
 
@@ -87,14 +111,33 @@ mod test {
     }
 
     #[tokio::test]
-    async fn find_unsent_messages() {
+    async fn set_processed() {
         let repository = PgOutboxMessageRepository {
             pool: test::create_sqlx_connection_pool().await,
         };
-        let unsent_message = persist_unsent_message(&repository).await;
-        let sent_message = persist_sent_message(&repository).await;
+        let message = save_unprocessed_message(&repository).await;
+        let unprocessed_messages = count_unprocessed_messages(&repository).await;
 
-        let unsent_messages = repository.find_not_sent().await.unwrap().unwrap();
+        repository
+            .set_processed(message.id(), Utc::now())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            unprocessed_messages - 1,
+            count_unprocessed_messages(&repository).await
+        );
+    }
+
+    #[tokio::test]
+    async fn find_unprocessed_messages() {
+        let repository = PgOutboxMessageRepository {
+            pool: test::create_sqlx_connection_pool().await,
+        };
+        let unsent_message = save_unprocessed_message(&repository).await;
+        let sent_message = save_processed_message(&repository).await;
+
+        let unsent_messages = repository.find_unprocessed().await.unwrap().unwrap();
 
         assert!(unsent_messages
             .iter()
@@ -102,7 +145,7 @@ mod test {
         assert!(!unsent_messages.iter().any(|m| m.id() == sent_message.id()));
     }
 
-    async fn persist_unsent_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
+    async fn save_unprocessed_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
         let message = OutboxMessage::customer_created_event(&create_customer());
         repository
             .save(message.clone())
@@ -111,7 +154,7 @@ mod test {
         message
     }
 
-    async fn persist_sent_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
+    async fn save_processed_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
         let mut message = OutboxMessage::customer_created_event(&create_customer());
         message.set_processed_at(Utc::now());
         repository
@@ -119,6 +162,17 @@ mod test {
             .await
             .expect("Error saving messages during test setup");
         message
+    }
+
+    async fn count_unprocessed_messages(repository: &PgOutboxMessageRepository) -> isize {
+        repository
+            .find_unprocessed()
+            .await
+            .unwrap()
+            .unwrap()
+            .len()
+            .try_into()
+            .unwrap()
     }
 
     fn create_customer() -> Customer {

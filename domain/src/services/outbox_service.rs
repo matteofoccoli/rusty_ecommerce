@@ -1,3 +1,5 @@
+use chrono::Utc;
+
 use crate::{
     publishers::outbox_publisher::OutboxMessagePublisher,
     repositories::outbox_repository::OutboxMessageRepository,
@@ -22,14 +24,22 @@ impl OutboxService {
     pub async fn publish(&self) -> Result<(), String> {
         let messages = self
             .outbox_message_repository
-            .find_not_sent()
+            .find_unprocessed()
             .await
-            .map_err(|_| "Error")?;
+            .map_err(|e| format!("Error reading messages from outbox: {e}"))?;
 
         if let Some(messages) = messages {
-            messages.into_iter().for_each(|m| {
-                let _ = self.outbox_message_publisher.publish(m);
-            });
+            for message in messages.into_iter() {
+                if let Err(_) = self.outbox_message_publisher.publish(message.clone()).await {
+                    println!("Error publishing message");
+                } else {
+                    // TODO if message was published but this updated fails?
+                    let _ = self
+                        .outbox_message_repository
+                        .set_processed(message.id(), Utc::now())
+                        .await;
+                }
+            }
         }
 
         Ok(())
@@ -44,7 +54,7 @@ mod test {
 
     use crate::{
         entities::{customer::Customer, outbox::OutboxMessage},
-        publishers::outbox_publisher::MockOutboxMessagePublisher,
+        publishers::outbox_publisher::{MockOutboxMessagePublisher, OutboxMessagePublisherError},
         repositories::outbox_repository::MockOutboxMessageRepository,
         value_objects::{Address, CustomerId},
     };
@@ -54,15 +64,53 @@ mod test {
     #[tokio::test]
     pub async fn publishes_message() {
         let message = OutboxMessage::customer_created_event(&create_customer());
+        let message_id = message.id();
 
         let mut publisher = MockOutboxMessagePublisher::new();
-        publisher.expect_publish().with(eq(message.clone())).once();
+        publisher
+            .expect_publish()
+            .with(eq(message.clone()))
+            .return_once(|_| Ok(()))
+            .once();
 
         let mut repository = MockOutboxMessageRepository::new();
         repository
-            .expect_find_not_sent()
+            .expect_find_unprocessed()
             .return_once(|| Ok(Some(vec![message])))
             .once();
+        repository
+            .expect_set_processed()
+            .withf(move |id, _| *id == message_id)
+            .return_once(|_, _| Ok(()))
+            .once();
+
+        let service = OutboxService::new(Box::new(repository), Box::new(publisher));
+
+        let result = service.publish().await;
+
+        assert!(result.is_ok())
+    }
+
+    #[tokio::test]
+    pub async fn handled_publisher_errors() {
+        let message = OutboxMessage::customer_created_event(&create_customer());
+
+        let mut publisher = MockOutboxMessagePublisher::new();
+        publisher
+            .expect_publish()
+            .return_once(|_| {
+                Err(OutboxMessagePublisherError(
+                    "Publishing went wrong :(".to_string(),
+                ))
+            })
+            .once();
+
+        let mut repository = MockOutboxMessageRepository::new();
+        repository
+            .expect_find_unprocessed()
+            .return_once(|| Ok(Some(vec![message])))
+            .once();
+        repository.expect_set_processed().never();
 
         let service = OutboxService::new(Box::new(repository), Box::new(publisher));
 
