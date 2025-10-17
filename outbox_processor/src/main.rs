@@ -26,7 +26,7 @@ async fn process_outbox() -> Result<(), String> {
 
     let outbox_service = OutboxService::new(Box::new(repository), Box::new(publisher));
 
-    outbox_service.publish().await
+    outbox_service.publish().await.map_err(|e| e.to_string())
 }
 
 pub(crate) async fn create_sqlx_connection_pool(db_connection_url: &str) -> Pool<Postgres> {

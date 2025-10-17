@@ -5,6 +5,17 @@ use crate::{
     repositories::outbox_repository::OutboxMessageRepository,
 };
 
+#[derive(Debug)]
+pub struct OutboxServiceError(pub String);
+
+impl std::fmt::Display for OutboxServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error handling outbox messages: {}", self.0)
+    }
+}
+
+impl std::error::Error for OutboxServiceError {}
+
 pub struct OutboxService {
     outbox_message_repository: Box<dyn OutboxMessageRepository>,
     outbox_message_publisher: Box<dyn OutboxMessagePublisher>,
@@ -21,12 +32,12 @@ impl OutboxService {
         }
     }
 
-    pub async fn publish(&self) -> Result<(), String> {
+    pub async fn publish(&self) -> Result<(), OutboxServiceError> {
         let messages = self
             .outbox_message_repository
             .find_unprocessed()
             .await
-            .map_err(|e| format!("Error reading messages from outbox: {e}"))?;
+            .map_err(|e| OutboxServiceError(e.to_string()))?;
 
         if let Some(messages) = messages {
             for message in messages.into_iter() {
