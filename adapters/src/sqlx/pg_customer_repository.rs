@@ -130,27 +130,4 @@ mod test {
             },
         }
     }
-
-    // async fn save_a_customer_on_db(pool: &Pool<Postgres>) -> Uuid {
-    //     let customer_id = Uuid::new_v4();
-    //     let customer = create_sample_customer(customer_id);
-
-    //     sqlx::query(
-    //         r#"
-    //     INSERT INTO customers (id, first_name, last_name, street, city, zip_code, state)
-    //     VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-    //     )
-    //     .bind(customer.id.0)
-    //     .bind(customer.first_name)
-    //     .bind(customer.last_name)
-    //     .bind(customer.address.street)
-    //     .bind(customer.address.city)
-    //     .bind(customer.address.zip_code)
-    //     .bind(customer.address.state)
-    //     .execute(pool)
-    //     .await
-    //     .expect("Error saving test customer on DB");
-
-    //     customer_id
-    // }
 }

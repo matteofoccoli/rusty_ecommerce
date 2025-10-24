@@ -18,6 +18,9 @@ sqlx = { version = "0.8.3", features = [
 ] }
 async-trait = "0.1.88"
 chrono = "0.4.41"
+rdkafka = "0.38.0"
+serde_json = "1.0.145"
+serde = "1.0.228"
 
 [dependencies.uuid]
 version = "1.6.1"
