@@ -20,4 +20,7 @@ Integration tests automatically recreates DB and apply migrations, just launch `
 
 ### Process Outbox
 
-Just run the outbox processor via `cargo run -p outbox_processor` from the workspace root.
+Just run the outbox processor via `cargo run -p outbox_processor` from the workspace root, passing needed env variables, like: 
+```
+DB_CONNECTION_URL="postgres://foo:bar@127.0.0.1/rusty_ecommerce" TOPIC="my_topic" BOOTSTRAP_SERVERS="localhost:19092" cargo run --bin outbox_processor
+```
