@@ -20,12 +20,13 @@
 - [x] Avoid unwrap or default when reading from the repository
 - [x] Handle processed at
 - [x] Set processed at after sending a message
+- [x] Implement Kafka publisher
 
-- [] Implement Kafka publisher
-
-- [] Isolate DB test execution (DB should be reinitialized!)
 - [] Implement PG common repository
 - [] handle failures while starting/committing/rollbacking transaction 
+- [] Implement outbox messages for other events
+
+- [] Isolate DB test execution (DB should be reinitialized!)
 - [] stop using diesel repositories in rest API
 - [] create/drop test DB
 - [] apply aggregate rules

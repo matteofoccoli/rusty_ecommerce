@@ -7,7 +7,13 @@ use domain::{
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 
 pub struct PgCustomerRepository {
-    pub pool: Pool<Postgres>,
+    pool: Pool<Postgres>,
+}
+
+impl PgCustomerRepository {
+    pub fn new(pool: Pool<Postgres>) -> Self {
+        Self { pool }
+    }
 }
 
 #[async_trait]

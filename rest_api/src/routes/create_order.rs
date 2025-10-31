@@ -8,13 +8,11 @@ async fn create_order(
     data: web::Form<OrderData>,
     pool: web::Data<Pool<Postgres>>,
 ) -> impl Responder {
-    let customer_repository = adapters::sqlx::pg_customer_repository::PgCustomerRepository {
-        pool: pool.get_ref().clone(),
-    };
+    let customer_repository =
+        adapters::sqlx::pg_customer_repository::PgCustomerRepository::new(pool.get_ref().clone());
 
-    let order_repository = adapters::sqlx::pg_order_repository::PgOrderRepository {
-        pool: pool.get_ref().clone(),
-    };
+    let order_repository =
+        adapters::sqlx::pg_order_repository::PgOrderRepository::new(pool.get_ref().clone());
 
     let order_service = domain::services::order_service::OrderService {
         customer_repository: Box::new(customer_repository),

@@ -3,18 +3,22 @@ use mockall::automock;
 
 #[derive(Debug)]
 pub enum CommonRepositoryError {
-    BeginTransactionError,
-    CommitTransactionError,
-    RollbackTransactionError,
+    BeginTransactionError(String),
+    CommitTransactionError(String),
+    RollbackTransactionError(String),
 }
 
 impl std::fmt::Display for CommonRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CommonRepositoryError::BeginTransactionError => write!(f, "Begin transaction error"),
-            CommonRepositoryError::CommitTransactionError => write!(f, "Commit transaction error"),
-            CommonRepositoryError::RollbackTransactionError => {
-                write!(f, "Rollback transaction error")
+            CommonRepositoryError::BeginTransactionError(message) => {
+                write!(f, "Begin transaction error: {}", message)
+            }
+            CommonRepositoryError::CommitTransactionError(message) => {
+                write!(f, "Commit transaction error: {}", message)
+            }
+            CommonRepositoryError::RollbackTransactionError(message) => {
+                write!(f, "Rollback transaction error {}", message)
             }
         }
     }

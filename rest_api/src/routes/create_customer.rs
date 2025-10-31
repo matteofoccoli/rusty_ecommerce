@@ -8,14 +8,14 @@ async fn create_customer(
     data: web::Form<CustomerData>,
     pool: web::Data<Pool<Postgres>>,
 ) -> impl Responder {
-    let customer_repository = adapters::sqlx::pg_customer_repository::PgCustomerRepository {
-        pool: pool.get_ref().clone(),
-    };
+    let customer_repository =
+        adapters::sqlx::pg_customer_repository::PgCustomerRepository::new(pool.get_ref().clone());
     let outbox_message_repository =
-        adapters::sqlx::pg_outbox_message_repository::PgOutboxMessageRepository {
-            pool: pool.get_ref().clone(),
-        };
-    let common_repository = adapters::sqlx::pg_common_repository::PgCommonRepository;
+        adapters::sqlx::pg_outbox_message_repository::PgOutboxMessageRepository::new(
+            pool.get_ref().clone(),
+        );
+    let common_repository =
+        adapters::sqlx::pg_common_repository::PgCommonRepository::new(pool.get_ref().clone());
 
     let customer_service = domain::services::customer_service::CustomerService::new(
         Box::new(customer_repository),

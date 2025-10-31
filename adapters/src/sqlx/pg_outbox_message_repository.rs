@@ -7,7 +7,13 @@ use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 use uuid::Uuid;
 
 pub struct PgOutboxMessageRepository {
-    pub pool: Pool<Postgres>,
+    pool: Pool<Postgres>,
+}
+
+impl PgOutboxMessageRepository {
+    pub fn new(pool: Pool<Postgres>) -> Self {
+        Self { pool }
+    }
 }
 
 #[async_trait]

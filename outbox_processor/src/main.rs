@@ -24,7 +24,7 @@ async fn process_outbox() -> Result<(), String> {
         env::var("BOOTSTRAP_SERVERS=").expect("pass BOOTSTRAP_SERVERS= to the script");
     let topic = env::var("TOPIC").expect("pass TOPIC to the script");
     let pool = create_sqlx_connection_pool(&db_connection_url).await;
-    let repository = PgOutboxMessageRepository { pool };
+    let repository = PgOutboxMessageRepository::new(pool);
     let publisher = KafkaOutboxMessagePublisher::new(boostrap_servers, topic);
 
     let outbox_service = OutboxService::new(Box::new(repository), Box::new(publisher));

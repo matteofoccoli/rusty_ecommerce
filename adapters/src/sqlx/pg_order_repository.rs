@@ -7,7 +7,13 @@ use domain::{
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 
 pub struct PgOrderRepository {
-    pub pool: Pool<Postgres>,
+    pool: Pool<Postgres>,
+}
+
+impl PgOrderRepository {
+    pub fn new(pool: Pool<Postgres>) -> Self {
+        Self { pool }
+    }
 }
 
 #[async_trait]
