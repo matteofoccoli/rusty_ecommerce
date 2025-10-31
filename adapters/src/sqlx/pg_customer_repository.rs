@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use domain::{
     entities::customer::Customer,
-    repositories::customer_repository::CustomerRepositoryError,
+    repositories::{
+        transactional_repository::TransactionalRepositoryError, customer_repository::CustomerRepositoryError,
+    },
     value_objects::{Address, CustomerId},
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -13,6 +15,31 @@ pub struct PgCustomerRepository {
 impl PgCustomerRepository {
     pub fn new(pool: Pool<Postgres>) -> Self {
         Self { pool }
+    }
+}
+
+#[async_trait]
+impl domain::repositories::transactional_repository::TransactionalRepository for PgCustomerRepository {
+    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        sqlx::query("BEGIN")
+            .execute(&self.pool)
+            .await
+            .map_err(|e| TransactionalRepositoryError::BeginTransactionError(e.to_string()))
+            .map(|_| Ok(()))?
+    }
+    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        sqlx::query("COMMIT")
+            .execute(&self.pool)
+            .await
+            .map_err(|e| TransactionalRepositoryError::CommitTransactionError(e.to_string()))
+            .map(|_| Ok(()))?
+    }
+    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        sqlx::query("ROLLBACK")
+            .execute(&self.pool)
+            .await
+            .map_err(|e| TransactionalRepositoryError::RollbackTransactionError(e.to_string()))
+            .map(|_| Ok(()))?
     }
 }
 

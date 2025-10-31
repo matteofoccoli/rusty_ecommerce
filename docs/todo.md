@@ -22,7 +22,7 @@
 - [x] Set processed at after sending a message
 - [x] Implement Kafka publisher
 
-- [] Implement PG common repository
+- [] Implement transactional repository behavior for all repos
 - [] handle failures while starting/committing/rollbacking transaction 
 - [] Implement outbox messages for other events
 

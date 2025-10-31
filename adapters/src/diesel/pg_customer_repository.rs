@@ -4,7 +4,10 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     Insertable, QueryDsl, Queryable, RunQueryDsl, Selectable, SelectableHelper,
 };
-use domain::repositories::customer_repository::CustomerRepositoryError;
+use domain::repositories::{
+    customer_repository::CustomerRepositoryError,
+    transactional_repository::TransactionalRepositoryError,
+};
 use uuid::Uuid;
 
 use crate::schema;
@@ -53,6 +56,22 @@ impl From<Address> for domain::value_objects::Address {
             zip_code: value.zip_code,
             state: value.state,
         }
+    }
+}
+
+#[async_trait]
+#[async_trait]
+impl domain::repositories::transactional_repository::TransactionalRepository
+    for PgCustomerRepository
+{
+    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        Ok(())
+    }
+    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        Ok(())
+    }
+    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        Ok(())
     }
 }
 

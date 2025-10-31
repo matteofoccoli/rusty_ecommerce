@@ -3,8 +3,7 @@ use uuid::Uuid;
 use crate::{
     entities::{customer::Customer, outbox::OutboxMessage},
     repositories::{
-        common_repository::CommonRepository, customer_repository::CustomerRepository,
-        outbox_repository::OutboxMessageRepository,
+        customer_repository::CustomerRepository, outbox_repository::OutboxMessageRepository,
     },
     value_objects::{Address, CustomerId},
 };
@@ -42,19 +41,16 @@ pub struct CreateCustomerRequestObject {
 pub struct CustomerService {
     customer_repository: Box<dyn CustomerRepository>,
     outbox_message_repository: Box<dyn OutboxMessageRepository>,
-    common_repository: Box<dyn CommonRepository>,
 }
 
 impl CustomerService {
     pub fn new(
         customer_repository: Box<dyn CustomerRepository>,
         outbox_message_repository: Box<dyn OutboxMessageRepository>,
-        common_repository: Box<dyn CommonRepository>,
     ) -> Self {
         Self {
             customer_repository,
             outbox_message_repository,
-            common_repository,
         }
     }
 
@@ -73,12 +69,12 @@ impl CustomerService {
         };
         let customer = Customer::new(customer_id, first_name, last_name, address);
 
-        let _ = self.common_repository.begin_transaction().await;
+        let _ = self.customer_repository.begin_transaction().await;
 
         let saved_customer = match self.customer_repository.save(customer).await {
             Ok(customer) => customer,
             Err(_) => {
-                let _ = self.common_repository.rollback_transaction().await;
+                let _ = self.customer_repository.rollback_transaction().await;
                 return Err(CustomerServiceError::CustomerNotSavedError);
             }
         };
@@ -90,12 +86,12 @@ impl CustomerService {
         {
             Ok(_) => (),
             Err(_) => {
-                let _ = self.common_repository.rollback_transaction().await;
+                let _ = self.customer_repository.rollback_transaction().await;
                 return Err(CustomerServiceError::OutboxMessageNotSavedError);
             }
         };
 
-        let _ = self.common_repository.commit_transaction().await;
+        let _ = self.customer_repository.commit_transaction().await;
         return Ok(saved_customer);
     }
 }
@@ -107,8 +103,7 @@ mod test {
     use crate::{
         entities::{customer::Customer, outbox::OutboxMessage},
         repositories::{
-            common_repository::MockCommonRepository,
-            customer_repository::{CustomerRepositoryError, MockCustomerRepository},
+            customer_repository::{CustomerRepositoryError, MockMyCustomerRepository},
             outbox_repository::{MockOutboxMessageRepository, OutboxMessageRepositoryError},
         },
         services::customer_service::{
@@ -125,11 +120,19 @@ mod test {
         let saved_outbox_message = OutboxMessage::customer_created_event(&saved_customer);
         let expected_event_payload = saved_outbox_message.event_payload();
 
-        let mut customer_repository = MockCustomerRepository::new();
+        let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository
             .expect_save()
             .once()
             .return_once(|_| Ok(saved_customer));
+        customer_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+        customer_repository
+            .expect_commit_transaction()
+            .once()
+            .returning(|| Ok(()));
 
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository
@@ -142,20 +145,9 @@ mod test {
             .once()
             .return_once(|_| Ok(saved_outbox_message));
 
-        let mut common_repository = MockCommonRepository::new();
-        common_repository
-            .expect_begin_transaction()
-            .once()
-            .returning(|| Ok(()));
-        common_repository
-            .expect_commit_transaction()
-            .once()
-            .returning(|| Ok(()));
-
         let customer_service = CustomerService::new(
             Box::new(customer_repository),
             Box::new(outbox_message_repository),
-            Box::new(common_repository),
         );
         let saved_customer = customer_service
             .create_customer(create_customer_request_object())
@@ -170,28 +162,25 @@ mod test {
 
     #[tokio::test]
     async fn error_while_saving_customer() {
-        let mut customer_repository = MockCustomerRepository::new();
+        let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository
             .expect_save()
             .returning(move |_| Err(CustomerRepositoryError::ConnectionNotCreatedError))
             .once();
-        let outbox_message_repository = MockOutboxMessageRepository::new();
-
-        let mut common_repository = MockCommonRepository::new();
-        common_repository
+        customer_repository
             .expect_begin_transaction()
             .once()
             .returning(|| Ok(()));
 
-        common_repository
+        customer_repository
             .expect_rollback_transaction()
             .once()
             .returning(|| Ok(()));
+        let outbox_message_repository = MockOutboxMessageRepository::new();
 
         let customer_service = CustomerService::new(
             Box::new(customer_repository),
             Box::new(outbox_message_repository),
-            Box::new(common_repository),
         );
         let result = customer_service
             .create_customer(CreateCustomerRequestObject {
@@ -212,11 +201,20 @@ mod test {
 
     #[tokio::test]
     async fn error_while_saving_outbox_message() {
-        let mut customer_repository = MockCustomerRepository::new();
+        let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository
             .expect_save()
             .returning(move |_| Ok(create_customer()))
             .once();
+        customer_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        customer_repository
+            .expect_rollback_transaction()
+            .once()
+            .returning(|| Ok(()));
 
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository
@@ -228,21 +226,9 @@ mod test {
             })
             .once();
 
-        let mut common_repository = MockCommonRepository::new();
-        common_repository
-            .expect_begin_transaction()
-            .once()
-            .returning(|| Ok(()));
-
-        common_repository
-            .expect_rollback_transaction()
-            .once()
-            .returning(|| Ok(()));
-
         let customer_service = CustomerService::new(
             Box::new(customer_repository),
             Box::new(outbox_message_repository),
-            Box::new(common_repository),
         );
         let result = customer_service
             .create_customer(CreateCustomerRequestObject {

@@ -118,7 +118,7 @@ mod test {
     use crate::{
         entities::{customer::Customer, order::Order},
         repositories::{
-            customer_repository::MockCustomerRepository,
+            customer_repository::MockMyCustomerRepository,
             order_repository::{MockOrderRepository, OrderRepositoryError},
         },
         services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
@@ -133,7 +133,7 @@ mod test {
 
     #[tokio::test]
     async fn creates_an_order_for_a_customer() {
-        let mut customer_repository = MockCustomerRepository::new();
+        let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Customer {
                 id: CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
@@ -178,7 +178,7 @@ mod test {
 
     #[tokio::test]
     async fn cannot_create_an_order_without_a_customer() {
-        let mut customer_repository = MockCustomerRepository::new();
+        let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository
             .expect_find_by_id()
             .returning(move |_| Ok(None));
@@ -217,7 +217,7 @@ mod test {
             })
         });
         let order_service = OrderService {
-            customer_repository: Box::new(MockCustomerRepository::new()),
+            customer_repository: Box::new(MockMyCustomerRepository::new()),
             order_repository: Box::new(order_repository),
         };
 
@@ -238,7 +238,7 @@ mod test {
         let mut order_repository = MockOrderRepository::new();
         order_repository.expect_find_by_id().returning(|_| Ok(None));
         let order_service = OrderService {
-            customer_repository: Box::new(MockCustomerRepository::new()),
+            customer_repository: Box::new(MockMyCustomerRepository::new()),
             order_repository: Box::new(order_repository),
         };
 
@@ -261,7 +261,7 @@ mod test {
             .expect_find_by_id()
             .returning(|_| Err(OrderRepositoryError::OrderNotFoundError));
         let order_service = OrderService {
-            customer_repository: Box::new(MockCustomerRepository::new()),
+            customer_repository: Box::new(MockMyCustomerRepository::new()),
             order_repository: Box::new(order_repository),
         };
 
