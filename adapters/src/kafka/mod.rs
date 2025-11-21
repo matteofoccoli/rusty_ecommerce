@@ -97,7 +97,8 @@ mod test {
                 zip_code: "customer zip code".to_string(),
                 state: "customer state".to_string(),
             },
-        });
+        })
+        .unwrap();
 
         let result = publisher.publish(message);
 

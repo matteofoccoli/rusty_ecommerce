@@ -65,27 +65,6 @@ impl OrderService {
         }
     }
 
-    async fn begin_transaction(&self) -> Result<(), OrderServiceError> {
-        self.order_repository
-            .begin_transaction()
-            .await
-            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
-    }
-
-    async fn commit_transaction(&self) -> Result<(), OrderServiceError> {
-        self.order_repository
-            .commit_transaction()
-            .await
-            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
-    }
-
-    async fn rollback_transaction(&self) -> Result<(), OrderServiceError> {
-        self.order_repository
-            .rollback_transaction()
-            .await
-            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
-    }
-
     pub async fn create_order(
         &self,
         create_order: CreateOrderRequestObject,
@@ -116,11 +95,17 @@ impl OrderService {
             }
         };
 
-        match self
-            .outbox_message_repository
-            .save(OutboxMessage::order_created_event(&saved_order))
-            .await
-        {
+        let message = match OutboxMessage::order_created_event(&saved_order) {
+            Ok(message) => message,
+            Err(_) => {
+                self.rollback_transaction().await?;
+                return Err(OrderServiceError::GenericError(
+                    "Error serializing outbox message".to_string(),
+                ));
+            }
+        };
+
+        match self.outbox_message_repository.save(message).await {
             Ok(_) => (),
             Err(_) => {
                 self.rollback_transaction().await?;
@@ -135,6 +120,7 @@ impl OrderService {
         return Ok(saved_order);
     }
 
+    // TODO save outbox event also in this case
     pub async fn add_product(
         &self,
         add_product: AddProductRequestObject,
@@ -164,6 +150,27 @@ impl OrderService {
             }
             None => return Err(OrderServiceError::OrderNotFoundError),
         }
+    }
+
+    async fn begin_transaction(&self) -> Result<(), OrderServiceError> {
+        self.order_repository
+            .begin_transaction()
+            .await
+            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
+    }
+
+    async fn commit_transaction(&self) -> Result<(), OrderServiceError> {
+        self.order_repository
+            .commit_transaction()
+            .await
+            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), OrderServiceError> {
+        self.order_repository
+            .rollback_transaction()
+            .await
+            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
     }
 }
 
@@ -195,7 +202,7 @@ mod test {
             OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
             CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
         );
-        let saved_outbox_message = OutboxMessage::order_created_event(&saved_order);
+        let saved_outbox_message = OutboxMessage::order_created_event(&saved_order).unwrap();
         let expected_event_payload = saved_outbox_message.event_payload();
 
         let mut customer_repository = MockMyCustomerRepository::new();
@@ -322,7 +329,6 @@ mod test {
 
         let customer_repository = MockMyCustomerRepository::new();
 
-        // TODO save outbox event also in this case?
         let order_service = OrderService::new(
             Box::new(customer_repository),
             Box::new(order_repository),

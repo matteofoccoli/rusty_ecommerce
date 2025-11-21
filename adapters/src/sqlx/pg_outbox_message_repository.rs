@@ -110,7 +110,7 @@ mod test {
         let pool = test::create_sqlx_connection_pool().await;
         let repository = PgOutboxMessageRepository { pool };
 
-        let message = OutboxMessage::customer_created_event(&create_customer());
+        let message = OutboxMessage::customer_created_event(&create_customer()).unwrap();
         let result = repository.save(message).await;
 
         assert!(result.is_ok());
@@ -152,7 +152,7 @@ mod test {
     }
 
     async fn save_unprocessed_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
-        let message = OutboxMessage::customer_created_event(&create_customer());
+        let message = OutboxMessage::customer_created_event(&create_customer()).unwrap();
         repository
             .save(message.clone())
             .await
@@ -161,7 +161,7 @@ mod test {
     }
 
     async fn save_processed_message(repository: &PgOutboxMessageRepository) -> OutboxMessage {
-        let mut message = OutboxMessage::customer_created_event(&create_customer());
+        let mut message = OutboxMessage::customer_created_event(&create_customer()).unwrap();
         message.set_processed_at(Utc::now());
         repository
             .save(message.clone())

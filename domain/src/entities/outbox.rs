@@ -4,6 +4,23 @@ use uuid::Uuid;
 
 use crate::entities::{customer::Customer, order::Order};
 
+#[derive(Debug)]
+pub enum OutboxMessageError {
+    PayloadSerializationError(String),
+}
+
+impl std::fmt::Display for OutboxMessageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutboxMessageError::PayloadSerializationError(error) => {
+                write!(f, "Payload serialization error: ${error}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for OutboxMessageError {}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct OutboxMessage {
     id: Uuid,
@@ -30,24 +47,28 @@ impl OutboxMessage {
         }
     }
 
-    pub fn customer_created_event(customer: &Customer) -> OutboxMessage {
-        OutboxMessage {
+    pub fn customer_created_event(
+        customer: &Customer,
+    ) -> Result<OutboxMessage, OutboxMessageError> {
+        let event_payload = customer_created_event_payload(customer)?;
+        Ok(OutboxMessage {
             id: Uuid::new_v4(),
             event_type: "customer_created".to_string(),
-            event_payload: customer_created_event_payload(customer),
+            event_payload,
             created_at: Utc::now(),
             processed_at: None,
-        }
+        })
     }
 
-    pub fn order_created_event(order: &Order) -> OutboxMessage {
-        OutboxMessage {
+    pub fn order_created_event(order: &Order) -> Result<OutboxMessage, OutboxMessageError> {
+        let event_payload = order_created_event_payload(order)?;
+        Ok(OutboxMessage {
             id: Uuid::new_v4(),
             event_type: "order_created".to_string(),
-            event_payload: order_created_event_payload(order),
+            event_payload,
             created_at: Utc::now(),
             processed_at: None,
-        }
+        })
     }
 
     pub fn id(&self) -> Uuid {
@@ -80,14 +101,14 @@ struct CustomerCreatedEvent {
     last_name: String,
 }
 
-fn customer_created_event_payload(customer: &Customer) -> String {
+fn customer_created_event_payload(customer: &Customer) -> Result<String, OutboxMessageError> {
     let customer_created_event = CustomerCreatedEvent {
         id: customer.id.0.to_string(),
         first_name: customer.first_name.clone(),
         last_name: customer.last_name.clone(),
     };
-    // TODO remove unwrap!
-    serde_json::to_string(&customer_created_event).unwrap()
+    serde_json::to_string(&customer_created_event)
+        .map_err(|e| OutboxMessageError::PayloadSerializationError(e.to_string()))
 }
 
 #[derive(Serialize)]
@@ -96,11 +117,11 @@ struct OrderCreatedEvent {
     customer_id: String,
 }
 
-fn order_created_event_payload(order: &Order) -> String {
+fn order_created_event_payload(order: &Order) -> Result<String, OutboxMessageError> {
     let order_created_event = OrderCreatedEvent {
         id: order.id.0.to_string(),
         customer_id: order.customer_id.0.to_string(),
     };
-    // TODO remove unwrap!
-    serde_json::to_string(&order_created_event).unwrap()
+    serde_json::to_string(&order_created_event)
+        .map_err(|e| OutboxMessageError::PayloadSerializationError(e.to_string()))
 }

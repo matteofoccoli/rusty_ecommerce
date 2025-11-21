@@ -39,12 +39,12 @@ impl OutboxService {
             .await
             .map_err(|e| OutboxServiceError(e.to_string()))?;
 
+        // TODO handle errors
         if let Some(messages) = messages {
             for message in messages.into_iter() {
                 if let Err(_) = self.outbox_message_publisher.publish(message.clone()).await {
                     println!("Error publishing message");
                 } else {
-                    // TODO if message was published but this updated fails?
                     let _ = self
                         .outbox_message_repository
                         .set_processed(message.id(), Utc::now())
@@ -74,7 +74,7 @@ mod test {
 
     #[tokio::test]
     pub async fn publishes_message() {
-        let message = OutboxMessage::customer_created_event(&create_customer());
+        let message = OutboxMessage::customer_created_event(&create_customer()).unwrap();
         let message_id = message.id();
 
         let mut publisher = MockOutboxMessagePublisher::new();
@@ -104,7 +104,7 @@ mod test {
 
     #[tokio::test]
     pub async fn handled_publisher_errors() {
-        let message = OutboxMessage::customer_created_event(&create_customer());
+        let message = OutboxMessage::customer_created_event(&create_customer()).unwrap();
 
         let mut publisher = MockOutboxMessagePublisher::new();
         publisher

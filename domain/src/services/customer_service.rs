@@ -50,27 +50,6 @@ impl CustomerService {
         }
     }
 
-    async fn begin_transaction(&self) -> Result<(), CustomerServiceError> {
-        self.customer_repository
-            .begin_transaction()
-            .await
-            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
-    }
-
-    async fn commit_transaction(&self) -> Result<(), CustomerServiceError> {
-        self.customer_repository
-            .commit_transaction()
-            .await
-            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
-    }
-
-    async fn rollback_transaction(&self) -> Result<(), CustomerServiceError> {
-        self.customer_repository
-            .rollback_transaction()
-            .await
-            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
-    }
-
     pub async fn create_customer(
         &self,
         request: CreateCustomerRequestObject,
@@ -96,11 +75,17 @@ impl CustomerService {
             }
         };
 
-        match self
-            .outbox_message_repository
-            .save(OutboxMessage::customer_created_event(&saved_customer))
-            .await
-        {
+        let message = match OutboxMessage::customer_created_event(&saved_customer) {
+            Ok(message) => message,
+            Err(_) => {
+                self.rollback_transaction().await?;
+                return Err(CustomerServiceError::GenericError(
+                    "Error serializing outbox message".to_string(),
+                ));
+            }
+        };
+
+        match self.outbox_message_repository.save(message).await {
             Ok(_) => (),
             Err(_) => {
                 self.rollback_transaction().await?;
@@ -112,6 +97,27 @@ impl CustomerService {
 
         self.commit_transaction().await?;
         return Ok(saved_customer);
+    }
+
+    async fn begin_transaction(&self) -> Result<(), CustomerServiceError> {
+        self.customer_repository
+            .begin_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
+    }
+
+    async fn commit_transaction(&self) -> Result<(), CustomerServiceError> {
+        self.customer_repository
+            .commit_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), CustomerServiceError> {
+        self.customer_repository
+            .rollback_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
     }
 }
 
@@ -136,7 +142,7 @@ mod test {
     #[tokio::test]
     async fn creates_a_customer() {
         let saved_customer = create_customer();
-        let saved_outbox_message = OutboxMessage::customer_created_event(&saved_customer);
+        let saved_outbox_message = OutboxMessage::customer_created_event(&saved_customer).unwrap();
         let expected_event_payload = saved_outbox_message.event_payload();
 
         let mut customer_repository = MockMyCustomerRepository::new();
