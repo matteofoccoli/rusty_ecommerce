@@ -128,7 +128,7 @@ impl PgOrderRepository {
         let connection = self
             .connection_pool
             .get()
-            .map_err(|_| OrderRepositoryError::ConnectionNotCreatedError)?;
+            .map_err(|_| OrderRepositoryError::ConnectionError)?;
         Ok(connection)
     }
 }

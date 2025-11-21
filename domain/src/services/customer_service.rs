@@ -11,7 +11,6 @@ use crate::{
 #[derive(Debug)]
 pub enum CustomerServiceError {
     CustomerNotSavedError,
-    OutboxMessageNotSavedError,
     GenericError(String),
 }
 
@@ -19,9 +18,6 @@ impl std::fmt::Display for CustomerServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CustomerServiceError::CustomerNotSavedError => write!(f, "Customer not saved error"),
-            CustomerServiceError::OutboxMessageNotSavedError => {
-                write!(f, "Outbox message not saved error")
-            }
             CustomerServiceError::GenericError(error) => write!(f, "Generic error: ${error}"),
         }
     }
@@ -54,6 +50,27 @@ impl CustomerService {
         }
     }
 
+    async fn begin_transaction(&self) -> Result<(), CustomerServiceError> {
+        self.customer_repository
+            .begin_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
+    }
+
+    async fn commit_transaction(&self) -> Result<(), CustomerServiceError> {
+        self.customer_repository
+            .commit_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), CustomerServiceError> {
+        self.customer_repository
+            .rollback_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
+    }
+
     pub async fn create_customer(
         &self,
         request: CreateCustomerRequestObject,
@@ -69,18 +86,12 @@ impl CustomerService {
         };
         let customer = Customer::new(customer_id, first_name, last_name, address);
 
-        self.customer_repository
-            .begin_transaction()
-            .await
-            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
+        self.begin_transaction().await?;
 
         let saved_customer = match self.customer_repository.save(customer).await {
             Ok(customer) => customer,
             Err(_) => {
-                self.customer_repository
-                    .rollback_transaction()
-                    .await
-                    .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
+                self.rollback_transaction().await?;
                 return Err(CustomerServiceError::CustomerNotSavedError);
             }
         };
@@ -92,18 +103,14 @@ impl CustomerService {
         {
             Ok(_) => (),
             Err(_) => {
-                self.customer_repository
-                    .rollback_transaction()
-                    .await
-                    .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
-                return Err(CustomerServiceError::OutboxMessageNotSavedError);
+                self.rollback_transaction().await?;
+                return Err(CustomerServiceError::GenericError(
+                    "Outbox message not saved".to_string(),
+                ));
             }
         };
 
-        self.customer_repository
-            .commit_transaction()
-            .await
-            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
+        self.commit_transaction().await?;
         return Ok(saved_customer);
     }
 }
@@ -127,7 +134,7 @@ mod test {
     const CUSTOMER_ID: &str = "2585491a-8e05-11ee-af1c-9bfe41ffe61f";
 
     #[tokio::test]
-    async fn success() {
+    async fn creates_a_customer() {
         let saved_customer = create_customer();
         let saved_outbox_message = OutboxMessage::customer_created_event(&saved_customer);
         let expected_event_payload = saved_outbox_message.event_payload();
@@ -173,7 +180,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn error_while_saving_customer() {
+    async fn has_an_error_while_saving_customer() {
         let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository
             .expect_save()
@@ -212,7 +219,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn error_while_saving_outbox_message() {
+    async fn has_an_error_while_saving_outbox_message() {
         let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository
             .expect_save()
@@ -253,10 +260,7 @@ mod test {
             })
             .await;
 
-        assert!(matches!(
-            result,
-            Err(CustomerServiceError::OutboxMessageNotSavedError)
-        ));
+        assert!(matches!(result, Err(CustomerServiceError::GenericError(_))));
     }
 
     fn create_customer_request_object() -> CreateCustomerRequestObject {

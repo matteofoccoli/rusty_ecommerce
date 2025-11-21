@@ -14,10 +14,16 @@ async fn create_order(
     let order_repository =
         adapters::sqlx::pg_order_repository::PgOrderRepository::new(pool.get_ref().clone());
 
-    let order_service = domain::services::order_service::OrderService {
-        customer_repository: Box::new(customer_repository),
-        order_repository: Box::new(order_repository),
-    };
+    let outbox_message_repository =
+        adapters::sqlx::pg_outbox_message_repository::PgOutboxMessageRepository::new(
+            pool.get_ref().clone(),
+        );
+
+    let order_service = domain::services::order_service::OrderService::new(
+        Box::new(customer_repository),
+        Box::new(order_repository),
+        Box::new(outbox_message_repository),
+    );
 
     match order_service
         .create_order(CreateOrderRequestObject {

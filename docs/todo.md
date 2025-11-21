@@ -22,9 +22,8 @@
 - [x] Set processed at after sending a message
 - [x] Implement Kafka publisher
 - [x] Implement transactional repository behavior for all repos
-
-- [] handle failures while starting/committing/rollbacking transaction 
-- [] Implement outbox messages for other events
+- [x] handle failures while starting/committing/rollbacking transaction 
+- [x] Implement outbox messages for other events
 
 - [] Isolate DB test execution (DB should be reinitialized!)
 - [] stop using diesel repositories in rest API

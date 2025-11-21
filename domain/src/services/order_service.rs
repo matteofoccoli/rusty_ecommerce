@@ -1,9 +1,11 @@
 use uuid::Uuid;
 
 use crate::{
-    entities::order::Order,
-    repositories::customer_repository::CustomerRepository,
-    repositories::order_repository::OrderRepository,
+    entities::{order::Order, outbox::OutboxMessage},
+    repositories::{
+        customer_repository::CustomerRepository, order_repository::OrderRepository,
+        outbox_repository::OutboxMessageRepository,
+    },
     value_objects::{CustomerId, OrderId, OrderItem, ProductId},
 };
 
@@ -33,8 +35,9 @@ impl std::fmt::Display for OrderServiceError {
 impl std::error::Error for OrderServiceError {}
 
 pub struct OrderService {
-    pub customer_repository: Box<dyn CustomerRepository>,
-    pub order_repository: Box<dyn OrderRepository>,
+    customer_repository: Box<dyn CustomerRepository>,
+    order_repository: Box<dyn OrderRepository>,
+    outbox_message_repository: Box<dyn OutboxMessageRepository>,
 }
 
 pub struct AddProductRequestObject {
@@ -50,6 +53,39 @@ pub struct CreateOrderRequestObject {
 }
 
 impl OrderService {
+    pub fn new(
+        customer_repository: Box<dyn CustomerRepository>,
+        order_repository: Box<dyn OrderRepository>,
+        outbox_message_repository: Box<dyn OutboxMessageRepository>,
+    ) -> Self {
+        Self {
+            customer_repository,
+            order_repository,
+            outbox_message_repository,
+        }
+    }
+
+    async fn begin_transaction(&self) -> Result<(), OrderServiceError> {
+        self.order_repository
+            .begin_transaction()
+            .await
+            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
+    }
+
+    async fn commit_transaction(&self) -> Result<(), OrderServiceError> {
+        self.order_repository
+            .commit_transaction()
+            .await
+            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), OrderServiceError> {
+        self.order_repository
+            .rollback_transaction()
+            .await
+            .map_err(|e| OrderServiceError::GenericError(e.to_string()))
+    }
+
     pub async fn create_order(
         &self,
         create_order: CreateOrderRequestObject,
@@ -59,23 +95,44 @@ impl OrderService {
         let customer_id = Uuid::try_parse(&create_order.customer_id)
             .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
 
+        self.begin_transaction().await?;
+
         let customer = self
             .customer_repository
             .find_by_id(CustomerId(customer_id))
             .await
             .map_err(|_| OrderServiceError::CustomerNotReadError)?;
-
         if customer.is_none() {
+            self.rollback_transaction().await?;
             return Err(OrderServiceError::CustomerNotFoundError);
-        } else {
-            let order = Order::create(OrderId(order_id), CustomerId(customer_id));
-            let saved_order = self
-                .order_repository
-                .save(order)
-                .await
-                .map_err(|_| OrderServiceError::OrderNotSavedError)?;
-            return Ok(saved_order);
         }
+
+        let order = Order::create(OrderId(order_id), CustomerId(customer_id));
+        let saved_order = match self.order_repository.save(order).await {
+            Ok(order) => order,
+            Err(_) => {
+                self.rollback_transaction().await?;
+                return Err(OrderServiceError::OrderNotSavedError);
+            }
+        };
+
+        match self
+            .outbox_message_repository
+            .save(OutboxMessage::order_created_event(&saved_order))
+            .await
+        {
+            Ok(_) => (),
+            Err(_) => {
+                self.rollback_transaction().await?;
+                return Err(OrderServiceError::GenericError(
+                    "Outbox message not saved".to_string(),
+                ));
+            }
+        }
+
+        self.commit_transaction().await?;
+
+        return Ok(saved_order);
     }
 
     pub async fn add_product(
@@ -116,10 +173,11 @@ mod test {
     use uuid::Uuid;
 
     use crate::{
-        entities::{customer::Customer, order::Order},
+        entities::{customer::Customer, order::Order, outbox::OutboxMessage},
         repositories::{
             customer_repository::MockMyCustomerRepository,
             order_repository::{MockMyOrderRepository, OrderRepositoryError},
+            outbox_repository::MockOutboxMessageRepository,
         },
         services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
         value_objects::{Address, CustomerId, OrderId},
@@ -133,6 +191,13 @@ mod test {
 
     #[tokio::test]
     async fn creates_an_order_for_a_customer() {
+        let saved_order = Order::create(
+            OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
+            CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
+        );
+        let saved_outbox_message = OutboxMessage::order_created_event(&saved_order);
+        let expected_event_payload = saved_outbox_message.event_payload();
+
         let mut customer_repository = MockMyCustomerRepository::new();
         customer_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Customer {
@@ -147,17 +212,38 @@ mod test {
                 },
             }))
         });
+
         let mut order_repository = MockMyOrderRepository::new();
-        order_repository.expect_save().once().returning(move |_| {
-            Ok(Order::create(
-                OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
-                CustomerId(Uuid::try_parse(CUSTOMER_ID).unwrap()),
-            ))
-        });
-        let order_service = OrderService {
-            customer_repository: Box::new(customer_repository),
-            order_repository: Box::new(order_repository),
-        };
+        order_repository
+            .expect_save()
+            .once()
+            .return_once(|_| Ok(saved_order));
+        order_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+        order_repository
+            .expect_commit_transaction()
+            .once()
+            .returning(|| Ok(()));
+        order_repository.expect_rollback_transaction().never();
+
+        let mut outbox_message_repository = MockOutboxMessageRepository::new();
+        outbox_message_repository
+            .expect_save()
+            .withf(move |m| {
+                m.event_type() == "order_created".to_string()
+                    && m.processed_at().is_none()
+                    && m.event_payload() == expected_event_payload
+            })
+            .once()
+            .return_once(|_| Ok(saved_outbox_message));
+
+        let order_service = OrderService::new(
+            Box::new(customer_repository),
+            Box::new(order_repository),
+            Box::new(outbox_message_repository),
+        );
 
         let result = order_service
             .create_order(CreateOrderRequestObject {
@@ -182,12 +268,27 @@ mod test {
         customer_repository
             .expect_find_by_id()
             .returning(move |_| Ok(None));
+
         let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_save().never();
-        let order_service = OrderService {
-            customer_repository: Box::new(customer_repository),
-            order_repository: Box::new(order_repository),
-        };
+        order_repository
+            .expect_begin_transaction()
+            .once()
+            .returning(|| Ok(()));
+        order_repository.expect_commit_transaction().never();
+        order_repository
+            .expect_rollback_transaction()
+            .once()
+            .returning(|| Ok(()));
+
+        let mut outbox_message_repository = MockOutboxMessageRepository::new();
+        outbox_message_repository.expect_save().never();
+
+        let order_service = OrderService::new(
+            Box::new(customer_repository),
+            Box::new(order_repository),
+            Box::new(outbox_message_repository),
+        );
 
         let result = order_service
             .create_order(CreateOrderRequestObject {
@@ -216,10 +317,17 @@ mod test {
                 order_items: vec![],
             })
         });
-        let order_service = OrderService {
-            customer_repository: Box::new(MockMyCustomerRepository::new()),
-            order_repository: Box::new(order_repository),
-        };
+
+        let outbox_message_repository = MockOutboxMessageRepository::new();
+
+        let customer_repository = MockMyCustomerRepository::new();
+
+        // TODO save outbox event also in this case?
+        let order_service = OrderService::new(
+            Box::new(customer_repository),
+            Box::new(order_repository),
+            Box::new(outbox_message_repository),
+        );
 
         let result = order_service
             .add_product(AddProductRequestObject {
@@ -237,10 +345,12 @@ mod test {
     async fn cannot_add_a_product_to_a_not_existing_order() {
         let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_find_by_id().returning(|_| Ok(None));
-        let order_service = OrderService {
-            customer_repository: Box::new(MockMyCustomerRepository::new()),
-            order_repository: Box::new(order_repository),
-        };
+
+        let order_service = OrderService::new(
+            Box::new(MockMyCustomerRepository::new()),
+            Box::new(order_repository),
+            Box::new(MockOutboxMessageRepository::new()),
+        );
 
         let result = order_service
             .add_product(AddProductRequestObject {
@@ -263,6 +373,7 @@ mod test {
         let order_service = OrderService {
             customer_repository: Box::new(MockMyCustomerRepository::new()),
             order_repository: Box::new(order_repository),
+            outbox_message_repository: Box::new(MockOutboxMessageRepository::new()),
         };
 
         let result = order_service

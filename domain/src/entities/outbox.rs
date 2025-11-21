@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::entities::customer::Customer;
+use crate::entities::{customer::Customer, order::Order};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OutboxMessage {
@@ -35,6 +35,16 @@ impl OutboxMessage {
             id: Uuid::new_v4(),
             event_type: "customer_created".to_string(),
             event_payload: customer_created_event_payload(customer),
+            created_at: Utc::now(),
+            processed_at: None,
+        }
+    }
+
+    pub fn order_created_event(order: &Order) -> OutboxMessage {
+        OutboxMessage {
+            id: Uuid::new_v4(),
+            event_type: "order_created".to_string(),
+            event_payload: order_created_event_payload(order),
             created_at: Utc::now(),
             processed_at: None,
         }
@@ -76,5 +86,21 @@ fn customer_created_event_payload(customer: &Customer) -> String {
         first_name: customer.first_name.clone(),
         last_name: customer.last_name.clone(),
     };
+    // TODO remove unwrap!
     serde_json::to_string(&customer_created_event).unwrap()
+}
+
+#[derive(Serialize)]
+struct OrderCreatedEvent {
+    id: String,
+    customer_id: String,
+}
+
+fn order_created_event_payload(order: &Order) -> String {
+    let order_created_event = OrderCreatedEvent {
+        id: order.id.0.to_string(),
+        customer_id: order.customer_id.0.to_string(),
+    };
+    // TODO remove unwrap!
+    serde_json::to_string(&order_created_event).unwrap()
 }

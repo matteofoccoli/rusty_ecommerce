@@ -12,19 +12,17 @@ use crate::{
 #[derive(Debug)]
 pub enum OrderRepositoryError {
     OrderNotFoundError,
-    OrderNotReadError,
     OrderNotSavedError,
     OrderItemsNotReadError,
-    ConnectionNotCreatedError,
+    ConnectionError,
 }
 
 impl std::fmt::Display for OrderRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             OrderRepositoryError::OrderNotFoundError => write!(f, "Order not found error"),
-            OrderRepositoryError::OrderNotReadError => write!(f, "Order not read error"),
             OrderRepositoryError::OrderNotSavedError => write!(f, "Order not saved error"),
-            OrderRepositoryError::ConnectionNotCreatedError => {
+            OrderRepositoryError::ConnectionError => {
                 write!(f, "Connection not created error")
             }
             OrderRepositoryError::OrderItemsNotReadError => {
