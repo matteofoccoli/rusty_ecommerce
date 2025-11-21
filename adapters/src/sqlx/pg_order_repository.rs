@@ -1,3 +1,4 @@
+use super::pg_transactional_repository::PgTransactionalRepository;
 use async_trait::async_trait;
 use domain::{
     entities::order::Order,
@@ -8,7 +9,6 @@ use domain::{
     value_objects::{CustomerId, OrderId, OrderItem, ProductId},
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
-use super::pg_transactional_repository::PgTransactionalRepository;
 
 pub struct PgOrderRepository {
     pool: Pool<Postgres>,
@@ -18,7 +18,10 @@ pub struct PgOrderRepository {
 impl PgOrderRepository {
     pub fn new(pool: Pool<Postgres>) -> Self {
         let transactional = PgTransactionalRepository::new(pool.clone());
-        Self { pool, transactional }
+        Self {
+            pool,
+            transactional,
+        }
     }
 }
 

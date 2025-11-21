@@ -51,8 +51,8 @@ mock! {
     #[async_trait]
     impl OrderRepository for MyOrderRepository {
         async fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError>;
-    async fn save(&self, order: Order) -> Result<Order, OrderRepositoryError>;
-    async fn update(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+        async fn save(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+        async fn update(&self, order: Order) -> Result<Order, OrderRepositoryError>;
     }
 
     #[async_trait]
