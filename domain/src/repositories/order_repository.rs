@@ -1,7 +1,13 @@
 use async_trait::async_trait;
-use mockall::automock;
+use mockall::mock;
 
-use crate::{entities::order::Order, value_objects::OrderId};
+use crate::{
+    entities::order::Order,
+    repositories::transactional_repository::{
+        TransactionalRepository, TransactionalRepositoryError,
+    },
+    value_objects::OrderId,
+};
 
 #[derive(Debug)]
 pub enum OrderRepositoryError {
@@ -30,12 +36,29 @@ impl std::fmt::Display for OrderRepositoryError {
 
 impl std::error::Error for OrderRepositoryError {}
 
-#[automock]
 #[async_trait]
-pub trait OrderRepository {
+pub trait OrderRepository: TransactionalRepository {
     async fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError>;
 
     async fn save(&self, order: Order) -> Result<Order, OrderRepositoryError>;
 
     async fn update(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+}
+
+mock! {
+    pub MyOrderRepository {}
+
+    #[async_trait]
+    impl OrderRepository for MyOrderRepository {
+        async fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError>;
+    async fn save(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+    async fn update(&self, order: Order) -> Result<Order, OrderRepositoryError>;
+    }
+
+    #[async_trait]
+    impl TransactionalRepository for MyOrderRepository {
+        async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError>;
+        async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError>;
+        async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError>;
+    }
 }

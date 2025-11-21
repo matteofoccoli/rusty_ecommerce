@@ -1,18 +1,37 @@
 use async_trait::async_trait;
 use domain::{
     entities::order::Order,
-    repositories::order_repository::OrderRepositoryError,
+    repositories::{
+        order_repository::OrderRepositoryError,
+        transactional_repository::TransactionalRepositoryError,
+    },
     value_objects::{CustomerId, OrderId, OrderItem, ProductId},
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
+use super::pg_transactional_repository::PgTransactionalRepository;
 
 pub struct PgOrderRepository {
     pool: Pool<Postgres>,
+    transactional: PgTransactionalRepository,
 }
 
 impl PgOrderRepository {
     pub fn new(pool: Pool<Postgres>) -> Self {
-        Self { pool }
+        let transactional = PgTransactionalRepository::new(pool.clone());
+        Self { pool, transactional }
+    }
+}
+
+#[async_trait]
+impl domain::repositories::transactional_repository::TransactionalRepository for PgOrderRepository {
+    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        self.transactional.begin_transaction().await
+    }
+    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        self.transactional.commit_transaction().await
+    }
+    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        self.transactional.rollback_transaction().await
     }
 }
 
@@ -92,9 +111,7 @@ mod test {
             domain::value_objects::OrderId(order_id),
             domain::value_objects::CustomerId(customer_id),
         );
-        let repository = PgOrderRepository {
-            pool: test::create_sqlx_connection_pool().await,
-        };
+        let repository = PgOrderRepository::new(test::create_sqlx_connection_pool().await);
 
         let result = repository.save(order);
 
@@ -112,9 +129,7 @@ mod test {
         let order_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
         let product_id = Uuid::new_v4();
-        let repository = PgOrderRepository {
-            pool: test::create_sqlx_connection_pool().await,
-        };
+        let repository = PgOrderRepository::new(test::create_sqlx_connection_pool().await);
         let _ = repository
             .save(domain::entities::order::Order::create(
                 domain::value_objects::OrderId(order_id),

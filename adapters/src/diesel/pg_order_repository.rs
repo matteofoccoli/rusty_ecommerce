@@ -4,7 +4,13 @@ use diesel::{
     ExpressionMethods, Insertable, PgConnection, QueryDsl, Queryable, RunQueryDsl, Selectable,
     SelectableHelper,
 };
-use domain::{repositories::order_repository::OrderRepositoryError, value_objects::OrderId};
+use domain::{
+    repositories::{
+        order_repository::OrderRepositoryError,
+        transactional_repository::TransactionalRepositoryError,
+    },
+    value_objects::OrderId,
+};
 use uuid::Uuid;
 
 use crate::schema;
@@ -29,6 +35,19 @@ struct OrderItem {
 
 pub struct PgOrderRepository {
     pub connection_pool: Pool<ConnectionManager<PgConnection>>,
+}
+
+#[async_trait]
+impl domain::repositories::transactional_repository::TransactionalRepository for PgOrderRepository {
+    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        Ok(())
+    }
+    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        Ok(())
+    }
+    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+        Ok(())
+    }
 }
 
 #[async_trait]

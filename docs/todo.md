@@ -21,8 +21,8 @@
 - [x] Handle processed at
 - [x] Set processed at after sending a message
 - [x] Implement Kafka publisher
+- [x] Implement transactional repository behavior for all repos
 
-- [] Implement transactional repository behavior for all repos
 - [] handle failures while starting/committing/rollbacking transaction 
 - [] Implement outbox messages for other events
 

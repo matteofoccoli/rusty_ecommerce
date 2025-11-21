@@ -119,7 +119,7 @@ mod test {
         entities::{customer::Customer, order::Order},
         repositories::{
             customer_repository::MockMyCustomerRepository,
-            order_repository::{MockOrderRepository, OrderRepositoryError},
+            order_repository::{MockMyOrderRepository, OrderRepositoryError},
         },
         services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
         value_objects::{Address, CustomerId, OrderId},
@@ -147,7 +147,7 @@ mod test {
                 },
             }))
         });
-        let mut order_repository = MockOrderRepository::new();
+        let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_save().once().returning(move |_| {
             Ok(Order::create(
                 OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
@@ -182,7 +182,7 @@ mod test {
         customer_repository
             .expect_find_by_id()
             .returning(move |_| Ok(None));
-        let mut order_repository = MockOrderRepository::new();
+        let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_save().never();
         let order_service = OrderService {
             customer_repository: Box::new(customer_repository),
@@ -201,7 +201,7 @@ mod test {
 
     #[tokio::test]
     async fn adds_a_product_to_an_order() {
-        let mut order_repository = MockOrderRepository::new();
+        let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_find_by_id().returning(move |_| {
             Ok(Some(Order {
                 id: OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
@@ -235,7 +235,7 @@ mod test {
 
     #[tokio::test]
     async fn cannot_add_a_product_to_a_not_existing_order() {
-        let mut order_repository = MockOrderRepository::new();
+        let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_find_by_id().returning(|_| Ok(None));
         let order_service = OrderService {
             customer_repository: Box::new(MockMyCustomerRepository::new()),
@@ -256,7 +256,7 @@ mod test {
 
     #[tokio::test]
     async fn cannot_add_a_product_if_there_is_an_infrastructural_failure() {
-        let mut order_repository = MockOrderRepository::new();
+        let mut order_repository = MockMyOrderRepository::new();
         order_repository
             .expect_find_by_id()
             .returning(|_| Err(OrderRepositoryError::OrderNotFoundError));

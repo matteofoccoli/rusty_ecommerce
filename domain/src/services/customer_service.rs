@@ -69,12 +69,18 @@ impl CustomerService {
         };
         let customer = Customer::new(customer_id, first_name, last_name, address);
 
-        let _ = self.customer_repository.begin_transaction().await;
+        self.customer_repository
+            .begin_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
 
         let saved_customer = match self.customer_repository.save(customer).await {
             Ok(customer) => customer,
             Err(_) => {
-                let _ = self.customer_repository.rollback_transaction().await;
+                self.customer_repository
+                    .rollback_transaction()
+                    .await
+                    .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
                 return Err(CustomerServiceError::CustomerNotSavedError);
             }
         };
@@ -86,12 +92,18 @@ impl CustomerService {
         {
             Ok(_) => (),
             Err(_) => {
-                let _ = self.customer_repository.rollback_transaction().await;
+                self.customer_repository
+                    .rollback_transaction()
+                    .await
+                    .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
                 return Err(CustomerServiceError::OutboxMessageNotSavedError);
             }
         };
 
-        let _ = self.customer_repository.commit_transaction().await;
+        self.customer_repository
+            .commit_transaction()
+            .await
+            .map_err(|e| CustomerServiceError::GenericError(e.to_string()))?;
         return Ok(saved_customer);
     }
 }

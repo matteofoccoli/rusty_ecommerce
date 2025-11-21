@@ -1,8 +1,10 @@
+use super::pg_transactional_repository::PgTransactionalRepository;
 use async_trait::async_trait;
 use domain::{
     entities::customer::Customer,
     repositories::{
-        transactional_repository::TransactionalRepositoryError, customer_repository::CustomerRepositoryError,
+        customer_repository::CustomerRepositoryError,
+        transactional_repository::TransactionalRepositoryError,
     },
     value_objects::{Address, CustomerId},
 };
@@ -10,36 +12,31 @@ use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 
 pub struct PgCustomerRepository {
     pool: Pool<Postgres>,
+    transactional: PgTransactionalRepository,
 }
 
 impl PgCustomerRepository {
     pub fn new(pool: Pool<Postgres>) -> Self {
-        Self { pool }
+        let transactional = PgTransactionalRepository::new(pool.clone());
+        Self {
+            pool,
+            transactional,
+        }
     }
 }
 
 #[async_trait]
-impl domain::repositories::transactional_repository::TransactionalRepository for PgCustomerRepository {
+impl domain::repositories::transactional_repository::TransactionalRepository
+    for PgCustomerRepository
+{
     async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
-        sqlx::query("BEGIN")
-            .execute(&self.pool)
-            .await
-            .map_err(|e| TransactionalRepositoryError::BeginTransactionError(e.to_string()))
-            .map(|_| Ok(()))?
+        self.transactional.begin_transaction().await
     }
     async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
-        sqlx::query("COMMIT")
-            .execute(&self.pool)
-            .await
-            .map_err(|e| TransactionalRepositoryError::CommitTransactionError(e.to_string()))
-            .map(|_| Ok(()))?
+        self.transactional.commit_transaction().await
     }
     async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
-        sqlx::query("ROLLBACK")
-            .execute(&self.pool)
-            .await
-            .map_err(|e| TransactionalRepositoryError::RollbackTransactionError(e.to_string()))
-            .map(|_| Ok(()))?
+        self.transactional.rollback_transaction().await
     }
 }
 
@@ -116,7 +113,7 @@ mod test {
     async fn save_customer() {
         let pool = test::create_sqlx_connection_pool().await;
 
-        let repository = PgCustomerRepository { pool };
+        let repository = PgCustomerRepository::new(pool);
 
         let customer_id = Uuid::new_v4();
         let result = repository.save(create_sample_customer(customer_id)).await;
@@ -129,7 +126,7 @@ mod test {
         let pool = test::create_sqlx_connection_pool().await;
         let customer_id = Uuid::new_v4();
         let customer = create_sample_customer(customer_id);
-        let repository = PgCustomerRepository { pool };
+        let repository = PgCustomerRepository::new(pool);
         repository
             .save(customer)
             .await

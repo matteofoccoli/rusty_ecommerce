@@ -60,7 +60,6 @@ impl From<Address> for domain::value_objects::Address {
 }
 
 #[async_trait]
-#[async_trait]
 impl domain::repositories::transactional_repository::TransactionalRepository
     for PgCustomerRepository
 {
