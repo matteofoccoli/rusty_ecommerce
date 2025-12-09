@@ -180,7 +180,11 @@ mod test {
     use uuid::Uuid;
 
     use crate::{
-        entities::{customer::Customer, order::Order, outbox::OutboxMessage},
+        entities::{
+            customer::Customer,
+            order::Order,
+            outbox::{OutboxMessage, OutboxMessageType},
+        },
         repositories::{
             customer_repository::MockMyCustomerRepository,
             order_repository::{MockMyOrderRepository, OrderRepositoryError},
@@ -239,7 +243,7 @@ mod test {
         outbox_message_repository
             .expect_save()
             .withf(move |m| {
-                m.event_type() == "order_created".to_string()
+                m.event_type() == OutboxMessageType::OrderCreated
                     && m.processed_at().is_none()
                     && m.event_payload() == expected_event_payload
             })

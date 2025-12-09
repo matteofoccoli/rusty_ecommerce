@@ -25,6 +25,8 @@
 - [x] handle failures while starting/committing/rollbacking transaction 
 - [x] Implement outbox messages for order created
 
+- [] Transactions don't work: they're using different pools!
+
 - [] Implement outbox messages for item added to order
 - [] Handle errors in message publisher: what if the message is sent on the queue, but updating outbox fails?
 - [] Isolate DB test execution (DB should be reinitialized!)

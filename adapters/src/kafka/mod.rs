@@ -30,7 +30,7 @@ impl KafkaOutboxMessagePublisher {
     ) -> Result<String, OutboxMessagePublisherError> {
         serde_json::to_string(&KafkaMessage {
             event_id: outbox_message.id().to_string(),
-            event_type: outbox_message.event_type(),
+            event_type: outbox_message.event_type().to_string(),
             event_payload: outbox_message.event_payload(),
         })
         .map_err(|e| OutboxMessagePublisherError(e.to_string()))

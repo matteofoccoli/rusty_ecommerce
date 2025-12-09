@@ -22,21 +22,48 @@ impl std::fmt::Display for OutboxMessageError {
 impl std::error::Error for OutboxMessageError {}
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OutboxMessage {
-    id: Uuid,
-    event_type: String,
-    event_payload: String,
-    created_at: DateTime<Utc>,
-    processed_at: Option<DateTime<Utc>>,
+pub enum OutboxMessageType {
+    OrderCreated,
+    CustomerCreated,
 }
 
 const ORDER_CREATED: &str = "order_created";
 const CUSTOMER_CREATED: &str = "customer_created";
 
+impl std::fmt::Display for OutboxMessageType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutboxMessageType::OrderCreated => write!(f, "{}", ORDER_CREATED),
+            OutboxMessageType::CustomerCreated => write!(f, "{}", CUSTOMER_CREATED),
+        }
+    }
+}
+
+impl std::str::FromStr for OutboxMessageType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            ORDER_CREATED => Ok(OutboxMessageType::OrderCreated),
+            CUSTOMER_CREATED => Ok(OutboxMessageType::CustomerCreated),
+            _ => Err(format!("Unknown outbox message type: {}", s)),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct OutboxMessage {
+    id: Uuid,
+    event_type: OutboxMessageType,
+    event_payload: String,
+    created_at: DateTime<Utc>,
+    processed_at: Option<DateTime<Utc>>,
+}
+
 impl OutboxMessage {
     pub fn new(
         id: Uuid,
-        event_type: String,
+        event_type: OutboxMessageType,
         event_payload: String,
         created_at: DateTime<Utc>,
         processed_at: Option<DateTime<Utc>>,
@@ -56,7 +83,7 @@ impl OutboxMessage {
         let event_payload = customer_created_event_payload(customer)?;
         Ok(OutboxMessage {
             id: Uuid::new_v4(),
-            event_type: CUSTOMER_CREATED.to_string(),
+            event_type: OutboxMessageType::CustomerCreated,
             event_payload,
             created_at: Utc::now(),
             processed_at: None,
@@ -67,7 +94,7 @@ impl OutboxMessage {
         let event_payload = order_created_event_payload(order)?;
         Ok(OutboxMessage {
             id: Uuid::new_v4(),
-            event_type: ORDER_CREATED.to_string(),
+            event_type: OutboxMessageType::OrderCreated,
             event_payload,
             created_at: Utc::now(),
             processed_at: None,
@@ -78,7 +105,7 @@ impl OutboxMessage {
         self.id
     }
 
-    pub fn event_type(&self) -> String {
+    pub fn event_type(&self) -> OutboxMessageType {
         self.event_type.clone()
     }
     pub fn event_payload(&self) -> String {

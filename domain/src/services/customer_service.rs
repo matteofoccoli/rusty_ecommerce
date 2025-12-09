@@ -1,3 +1,4 @@
+use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::{
@@ -65,11 +66,14 @@ impl CustomerService {
         };
         let customer = Customer::new(customer_id, first_name, last_name, address);
 
+        info!("Creating customer");
+
         self.begin_transaction().await?;
 
         let saved_customer = match self.customer_repository.save(customer).await {
             Ok(customer) => customer,
-            Err(_) => {
+            Err(e) => {
+                error!("Error saving customer: {}", e);
                 self.rollback_transaction().await?;
                 return Err(CustomerServiceError::CustomerNotSavedError);
             }
@@ -77,7 +81,8 @@ impl CustomerService {
 
         let message = match OutboxMessage::customer_created_event(&saved_customer) {
             Ok(message) => message,
-            Err(_) => {
+            Err(e) => {
+                error!("Error creating outbox message: {}", e);
                 self.rollback_transaction().await?;
                 return Err(CustomerServiceError::GenericError(
                     "Error serializing outbox message".to_string(),
@@ -87,7 +92,8 @@ impl CustomerService {
 
         match self.outbox_message_repository.save(message).await {
             Ok(_) => (),
-            Err(_) => {
+            Err(e) => {
+                error!("Error saving outbox message: {}", e);
                 self.rollback_transaction().await?;
                 return Err(CustomerServiceError::GenericError(
                     "Outbox message not saved".to_string(),
@@ -126,7 +132,10 @@ mod test {
     use uuid::Uuid;
 
     use crate::{
-        entities::{customer::Customer, outbox::OutboxMessage},
+        entities::{
+            customer::Customer,
+            outbox::{OutboxMessage, OutboxMessageType},
+        },
         repositories::{
             customer_repository::{CustomerRepositoryError, MockMyCustomerRepository},
             outbox_repository::{MockOutboxMessageRepository, OutboxMessageRepositoryError},
@@ -163,7 +172,7 @@ mod test {
         outbox_message_repository
             .expect_save()
             .withf(move |m| {
-                m.event_type() == "customer_created".to_string()
+                m.event_type() == OutboxMessageType::CustomerCreated
                     && m.processed_at().is_none()
                     && m.event_payload() == expected_event_payload
             })

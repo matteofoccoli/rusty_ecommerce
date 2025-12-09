@@ -31,7 +31,7 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
         "#,
         )
         .bind(&message.id())
-        .bind(&message.event_type())
+        .bind(&message.event_type().to_string())
         .bind(&message.event_payload())
         .bind(&message.created_at())
         .bind(&message.processed_at())
@@ -50,7 +50,17 @@ impl domain::repositories::outbox_repository::OutboxMessageRepository
         let messages = sqlx::query("SELECT * FROM outbox_messages WHERE processed_at IS NULL")
             .try_map(|row: PgRow| {
                 let id: Uuid = row.try_get("id")?;
-                let event_type = row.try_get("event_type")?;
+                let event_type_string: String = row.try_get("event_type")?;
+                let event_type =
+                    event_type_string
+                        .parse()
+                        .map_err(|_| sqlx::Error::ColumnDecode {
+                            index: "event_type".to_string(),
+                            source: Box::new(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                "Invalid event type",
+                            )),
+                        })?;
                 let event_payload = row.try_get("event_payload")?;
                 let created_at = row.try_get("created_at")?;
                 let processed_at = row.try_get("processed_at")?;

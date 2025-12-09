@@ -5,6 +5,7 @@ use sqlx::{PgPool, Pool, Postgres};
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
+    tracing_subscriber::fmt::init();
     let settings = get_settings().expect("Failed to read settings");
     let address = format!("127.0.0.1:{}", settings.application_port);
     let listener = TcpListener::bind(address).expect("Failed to bind address and port");
