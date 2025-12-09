@@ -15,7 +15,7 @@ async fn create_customer(
             pool.get_ref().clone(),
         );
 
-    let customer_service = domain::services::customer_service::CustomerService::new(
+    let mut customer_service = domain::services::customer_service::CustomerService::new(
         Box::new(customer_repository),
         Box::new(outbox_message_repository),
     );

@@ -66,7 +66,7 @@ impl OrderService {
     }
 
     pub async fn create_order(
-        &self,
+        &mut self,
         create_order: CreateOrderRequestObject,
     ) -> Result<Order, OrderServiceError> {
         let order_id = Uuid::try_parse(&create_order.order_id)
@@ -152,21 +152,21 @@ impl OrderService {
         }
     }
 
-    async fn begin_transaction(&self) -> Result<(), OrderServiceError> {
+    async fn begin_transaction(&mut self) -> Result<(), OrderServiceError> {
         self.order_repository
             .begin_transaction()
             .await
             .map_err(|e| OrderServiceError::GenericError(e.to_string()))
     }
 
-    async fn commit_transaction(&self) -> Result<(), OrderServiceError> {
+    async fn commit_transaction(&mut self) -> Result<(), OrderServiceError> {
         self.order_repository
             .commit_transaction()
             .await
             .map_err(|e| OrderServiceError::GenericError(e.to_string()))
     }
 
-    async fn rollback_transaction(&self) -> Result<(), OrderServiceError> {
+    async fn rollback_transaction(&mut self) -> Result<(), OrderServiceError> {
         self.order_repository
             .rollback_transaction()
             .await
@@ -250,7 +250,7 @@ mod test {
             .once()
             .return_once(|_| Ok(saved_outbox_message));
 
-        let order_service = OrderService::new(
+        let mut order_service = OrderService::new(
             Box::new(customer_repository),
             Box::new(order_repository),
             Box::new(outbox_message_repository),
@@ -295,7 +295,7 @@ mod test {
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository.expect_save().never();
 
-        let order_service = OrderService::new(
+        let mut order_service = OrderService::new(
             Box::new(customer_repository),
             Box::new(order_repository),
             Box::new(outbox_message_repository),

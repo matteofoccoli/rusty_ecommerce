@@ -10,12 +10,12 @@ use domain::{
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 
-pub struct PgOrderRepository {
+pub struct PgOrderRepository<'a> {
     pool: Pool<Postgres>,
-    transactional: PgTransactionalRepository,
+    transactional: PgTransactionalRepository<'a>,
 }
 
-impl PgOrderRepository {
+impl<'a> PgOrderRepository<'a> {
     pub fn new(pool: Pool<Postgres>) -> Self {
         let transactional = PgTransactionalRepository::new(pool.clone());
         Self {
@@ -26,20 +26,22 @@ impl PgOrderRepository {
 }
 
 #[async_trait]
-impl domain::repositories::transactional_repository::TransactionalRepository for PgOrderRepository {
-    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+impl<'a> domain::repositories::transactional_repository::TransactionalRepository
+    for PgOrderRepository<'a>
+{
+    async fn begin_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         self.transactional.begin_transaction().await
     }
-    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn commit_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         self.transactional.commit_transaction().await
     }
-    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn rollback_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         self.transactional.rollback_transaction().await
     }
 }
 
 #[async_trait]
-impl domain::repositories::order_repository::OrderRepository for PgOrderRepository {
+impl<'a> domain::repositories::order_repository::OrderRepository for PgOrderRepository<'a> {
     async fn find_by_id(&self, id: OrderId) -> Result<Option<Order>, OrderRepositoryError> {
         let uuid = id.0;
         let mut order = sqlx::query("SELECT * FROM orders where id = $1")

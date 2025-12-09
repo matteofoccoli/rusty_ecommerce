@@ -63,13 +63,13 @@ impl From<Address> for domain::value_objects::Address {
 impl domain::repositories::transactional_repository::TransactionalRepository
     for PgCustomerRepository
 {
-    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn begin_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         Ok(())
     }
-    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn commit_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         Ok(())
     }
-    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn rollback_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         Ok(())
     }
 }

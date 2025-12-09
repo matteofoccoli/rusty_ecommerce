@@ -24,8 +24,8 @@
 - [x] Implement transactional repository behavior for all repos
 - [x] handle failures while starting/committing/rollbacking transaction 
 - [x] Implement outbox messages for order created
-
-- [] Transactions don't work: they're using different pools!
+- [x] Transactions don't work: they're using different pools!
+- [x] Proper error raising if committing/rollbacking a not existing transaction
 
 - [] Implement outbox messages for item added to order
 - [] Handle errors in message publisher: what if the message is sent on the queue, but updating outbox fails?

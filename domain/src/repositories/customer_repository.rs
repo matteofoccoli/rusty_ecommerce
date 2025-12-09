@@ -49,8 +49,8 @@ mock! {
 
     #[async_trait]
     impl TransactionalRepository for MyCustomerRepository {
-        async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError>;
-        async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError>;
-        async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError>;
+        async fn begin_transaction(&mut self) -> Result<(), TransactionalRepositoryError>;
+        async fn commit_transaction(&mut self) -> Result<(), TransactionalRepositoryError>;
+        async fn rollback_transaction(&mut self) -> Result<(), TransactionalRepositoryError>;
     }
 }

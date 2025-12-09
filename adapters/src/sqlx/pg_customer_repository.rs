@@ -10,12 +10,12 @@ use domain::{
 };
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 
-pub struct PgCustomerRepository {
+pub struct PgCustomerRepository<'a> {
     pool: Pool<Postgres>,
-    transactional: PgTransactionalRepository,
+    transactional: PgTransactionalRepository<'a>,
 }
 
-impl PgCustomerRepository {
+impl<'a> PgCustomerRepository<'a> {
     pub fn new(pool: Pool<Postgres>) -> Self {
         let transactional = PgTransactionalRepository::new(pool.clone());
         Self {
@@ -26,22 +26,24 @@ impl PgCustomerRepository {
 }
 
 #[async_trait]
-impl domain::repositories::transactional_repository::TransactionalRepository
-    for PgCustomerRepository
+impl<'a> domain::repositories::transactional_repository::TransactionalRepository
+    for PgCustomerRepository<'a>
 {
-    async fn begin_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn begin_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         self.transactional.begin_transaction().await
     }
-    async fn commit_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn commit_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         self.transactional.commit_transaction().await
     }
-    async fn rollback_transaction(&self) -> Result<(), TransactionalRepositoryError> {
+    async fn rollback_transaction(&mut self) -> Result<(), TransactionalRepositoryError> {
         self.transactional.rollback_transaction().await
     }
 }
 
 #[async_trait]
-impl domain::repositories::customer_repository::CustomerRepository for PgCustomerRepository {
+impl<'a> domain::repositories::customer_repository::CustomerRepository
+    for PgCustomerRepository<'a>
+{
     async fn find_by_id(
         &self,
         id: CustomerId,

@@ -52,7 +52,7 @@ impl CustomerService {
     }
 
     pub async fn create_customer(
-        &self,
+        &mut self,
         request: CreateCustomerRequestObject,
     ) -> Result<Customer, CustomerServiceError> {
         let customer_id = CustomerId(Uuid::new_v4());
@@ -105,21 +105,21 @@ impl CustomerService {
         return Ok(saved_customer);
     }
 
-    async fn begin_transaction(&self) -> Result<(), CustomerServiceError> {
+    async fn begin_transaction(&mut self) -> Result<(), CustomerServiceError> {
         self.customer_repository
             .begin_transaction()
             .await
             .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
     }
 
-    async fn commit_transaction(&self) -> Result<(), CustomerServiceError> {
+    async fn commit_transaction(&mut self) -> Result<(), CustomerServiceError> {
         self.customer_repository
             .commit_transaction()
             .await
             .map_err(|e| CustomerServiceError::GenericError(e.to_string()))
     }
 
-    async fn rollback_transaction(&self) -> Result<(), CustomerServiceError> {
+    async fn rollback_transaction(&mut self) -> Result<(), CustomerServiceError> {
         self.customer_repository
             .rollback_transaction()
             .await
@@ -179,7 +179,7 @@ mod test {
             .once()
             .return_once(|_| Ok(saved_outbox_message));
 
-        let customer_service = CustomerService::new(
+        let mut customer_service = CustomerService::new(
             Box::new(customer_repository),
             Box::new(outbox_message_repository),
         );
@@ -212,7 +212,7 @@ mod test {
             .returning(|| Ok(()));
         let outbox_message_repository = MockOutboxMessageRepository::new();
 
-        let customer_service = CustomerService::new(
+        let mut customer_service = CustomerService::new(
             Box::new(customer_repository),
             Box::new(outbox_message_repository),
         );
@@ -260,7 +260,7 @@ mod test {
             })
             .once();
 
-        let customer_service = CustomerService::new(
+        let mut customer_service = CustomerService::new(
             Box::new(customer_repository),
             Box::new(outbox_message_repository),
         );

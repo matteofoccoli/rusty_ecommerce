@@ -19,7 +19,7 @@ async fn create_order(
             pool.get_ref().clone(),
         );
 
-    let order_service = domain::services::order_service::OrderService::new(
+    let mut order_service = domain::services::order_service::OrderService::new(
         Box::new(customer_repository),
         Box::new(order_repository),
         Box::new(outbox_message_repository),
