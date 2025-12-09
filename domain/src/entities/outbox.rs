@@ -30,6 +30,9 @@ pub struct OutboxMessage {
     processed_at: Option<DateTime<Utc>>,
 }
 
+const ORDER_CREATED: &str = "order_created";
+const CUSTOMER_CREATED: &str = "customer_created";
+
 impl OutboxMessage {
     pub fn new(
         id: Uuid,
@@ -53,7 +56,7 @@ impl OutboxMessage {
         let event_payload = customer_created_event_payload(customer)?;
         Ok(OutboxMessage {
             id: Uuid::new_v4(),
-            event_type: "customer_created".to_string(),
+            event_type: CUSTOMER_CREATED.to_string(),
             event_payload,
             created_at: Utc::now(),
             processed_at: None,
@@ -64,7 +67,7 @@ impl OutboxMessage {
         let event_payload = order_created_event_payload(order)?;
         Ok(OutboxMessage {
             id: Uuid::new_v4(),
-            event_type: "order_created".to_string(),
+            event_type: ORDER_CREATED.to_string(),
             event_payload,
             created_at: Utc::now(),
             processed_at: None,

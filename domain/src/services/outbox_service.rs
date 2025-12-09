@@ -1,16 +1,46 @@
 use chrono::Utc;
 
 use crate::{
-    publishers::outbox_publisher::OutboxMessagePublisher,
+    entities::outbox::OutboxMessage, publishers::outbox_publisher::OutboxMessagePublisher,
     repositories::outbox_repository::OutboxMessageRepository,
 };
 
 #[derive(Debug)]
-pub struct OutboxServiceError(pub String);
+pub enum OutboxServiceError {
+    MessageNotPublishedError(OutboxMessage, String),
+    MessageNotSetToProcessedError(OutboxMessage, String),
+    MessagesNotReadError(String),
+    GenericError(String),
+}
 
 impl std::fmt::Display for OutboxServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error handling outbox messages: {}", self.0)
+        match self {
+            OutboxServiceError::MessagesNotReadError(error) => {
+                write!(f, "Error reading messages: {}", error)
+            }
+            OutboxServiceError::GenericError(error) => {
+                write!(f, "Error handling outbox messages: {}", error)
+            }
+            OutboxServiceError::MessageNotPublishedError(message, error) => {
+                write!(
+                    f,
+                    "Error publishing message (id: {}, type: {}): {}",
+                    message.id(),
+                    message.event_type(),
+                    error
+                )
+            }
+            OutboxServiceError::MessageNotSetToProcessedError(message, error) => {
+                write!(
+                    f,
+                    "Error setting message message to processed (id: {}, type: {}): {}",
+                    message.id(),
+                    message.event_type(),
+                    error
+                )
+            }
+        }
     }
 }
 
@@ -37,19 +67,22 @@ impl OutboxService {
             .outbox_message_repository
             .find_unprocessed()
             .await
-            .map_err(|e| OutboxServiceError(e.to_string()))?;
+            .map_err(|e| OutboxServiceError::MessagesNotReadError(e.to_string()))?;
 
-        // TODO handle errors
         if let Some(messages) = messages {
             for message in messages.into_iter() {
-                if let Err(_) = self.outbox_message_publisher.publish(message.clone()).await {
-                    println!("Error publishing message");
-                } else {
-                    let _ = self
-                        .outbox_message_repository
-                        .set_processed(message.id(), Utc::now())
-                        .await;
+                if let Err(error) = self.outbox_message_publisher.publish(message.clone()).await {
+                    return Err(OutboxServiceError::MessageNotPublishedError(
+                        message,
+                        error.to_string(),
+                    ));
                 }
+                self.outbox_message_repository
+                    .set_processed(message.id(), Utc::now())
+                    .await
+                    .map_err(|e| {
+                        OutboxServiceError::MessageNotSetToProcessedError(message, e.to_string())
+                    })?;
             }
         }
 
@@ -125,9 +158,12 @@ mod test {
 
         let service = OutboxService::new(Box::new(repository), Box::new(publisher));
 
-        let result = service.publish().await;
+        let result = service.publish().await.unwrap_err();
 
-        assert!(result.is_ok())
+        assert!(matches!(
+            result,
+            OutboxServiceError::MessageNotPublishedError(_, _)
+        ));
     }
 
     fn create_customer() -> Customer {

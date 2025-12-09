@@ -25,8 +25,8 @@
 - [x] handle failures while starting/committing/rollbacking transaction 
 - [x] Implement outbox messages for order created
 
-- [] Handle errors in message publisher
 - [] Implement outbox messages for item added to order
+- [] Handle errors in message publisher: what if the message is sent on the queue, but updating outbox fails?
 - [] Isolate DB test execution (DB should be reinitialized!)
 - [] stop using diesel repositories in rest API
 - [] create/drop test DB
