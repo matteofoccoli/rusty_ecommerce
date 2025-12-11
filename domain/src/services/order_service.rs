@@ -1,3 +1,4 @@
+use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::{
@@ -74,7 +75,7 @@ impl OrderService {
         let customer_id = Uuid::try_parse(&create_order.customer_id)
             .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
 
-        self.begin_transaction().await?;
+        info!("Creating order");
 
         let customer = self
             .customer_repository
@@ -82,14 +83,17 @@ impl OrderService {
             .await
             .map_err(|_| OrderServiceError::CustomerNotReadError)?;
         if customer.is_none() {
-            self.rollback_transaction().await?;
+            error!("Customer not found");
             return Err(OrderServiceError::CustomerNotFoundError);
         }
 
         let order = Order::create(OrderId(order_id), CustomerId(customer_id));
+
+        self.begin_transaction().await?;
         let saved_order = match self.order_repository.save(order).await {
             Ok(order) => order,
-            Err(_) => {
+            Err(e) => {
+                error!("Error saving order: {}", e);
                 self.rollback_transaction().await?;
                 return Err(OrderServiceError::OrderNotSavedError);
             }
@@ -97,7 +101,8 @@ impl OrderService {
 
         let message = match OutboxMessage::order_created_event(&saved_order) {
             Ok(message) => message,
-            Err(_) => {
+            Err(e) => {
+                error!("Error serializing outbox message: {}", e);
                 self.rollback_transaction().await?;
                 return Err(OrderServiceError::GenericError(
                     "Error serializing outbox message".to_string(),
@@ -107,7 +112,8 @@ impl OrderService {
 
         match self.outbox_message_repository.save(message).await {
             Ok(_) => (),
-            Err(_) => {
+            Err(e) => {
+                error!("Error saving outbox message: {}", e);
                 self.rollback_transaction().await?;
                 return Err(OrderServiceError::GenericError(
                     "Outbox message not saved".to_string(),
@@ -116,13 +122,12 @@ impl OrderService {
         }
 
         self.commit_transaction().await?;
-
         return Ok(saved_order);
     }
 
     // TODO save outbox event also in this case
     pub async fn add_product(
-        &self,
+        &mut self,
         add_product: AddProductRequestObject,
     ) -> Result<Order, OrderServiceError> {
         let order_id = Uuid::try_parse(&add_product.order_id)
@@ -130,25 +135,35 @@ impl OrderService {
         let product_id = Uuid::try_parse(&add_product.product_id)
             .map_err(|err| OrderServiceError::GenericError(err.to_string()))?;
 
-        match self
+        info!("Adding product to order");
+
+        let Some(mut order) = self
             .order_repository
             .find_by_id(OrderId(order_id))
             .await
             .map_err(|_| OrderServiceError::OrderNotReadError)?
-        {
-            Some(mut order) => {
-                order.add(OrderItem {
-                    price: add_product.price,
-                    quantity: add_product.quantity,
-                    product_id: ProductId(product_id),
-                });
-                return self
-                    .order_repository
-                    .update(order)
-                    .await
-                    .map_err(|_| OrderServiceError::OrderNotSavedError);
+        else {
+            error!("Order not found");
+            return Err(OrderServiceError::OrderNotFoundError);
+        };
+
+        self.begin_transaction().await?;
+
+        order.add(OrderItem {
+            price: add_product.price,
+            quantity: add_product.quantity,
+            product_id: ProductId(product_id),
+        });
+        match self.order_repository.update(order).await {
+            Ok(order) => {
+                self.commit_transaction().await?;
+                Ok(order)
             }
-            None => return Err(OrderServiceError::OrderNotFoundError),
+            Err(e) => {
+                error!("Error saving order: {}", e);
+                self.rollback_transaction().await?;
+                return Err(OrderServiceError::OrderNotSavedError);
+            }
         }
     }
 
@@ -282,15 +297,6 @@ mod test {
 
         let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_save().never();
-        order_repository
-            .expect_begin_transaction()
-            .once()
-            .returning(|| Ok(()));
-        order_repository.expect_commit_transaction().never();
-        order_repository
-            .expect_rollback_transaction()
-            .once()
-            .returning(|| Ok(()));
 
         let mut outbox_message_repository = MockOutboxMessageRepository::new();
         outbox_message_repository.expect_save().never();
@@ -328,12 +334,18 @@ mod test {
                 order_items: vec![],
             })
         });
+        order_repository
+            .expect_begin_transaction()
+            .returning(|| Ok(()));
+        order_repository
+            .expect_commit_transaction()
+            .returning(|| Ok(()));
 
         let outbox_message_repository = MockOutboxMessageRepository::new();
 
         let customer_repository = MockMyCustomerRepository::new();
 
-        let order_service = OrderService::new(
+        let mut order_service = OrderService::new(
             Box::new(customer_repository),
             Box::new(order_repository),
             Box::new(outbox_message_repository),
@@ -356,7 +368,7 @@ mod test {
         let mut order_repository = MockMyOrderRepository::new();
         order_repository.expect_find_by_id().returning(|_| Ok(None));
 
-        let order_service = OrderService::new(
+        let mut order_service = OrderService::new(
             Box::new(MockMyCustomerRepository::new()),
             Box::new(order_repository),
             Box::new(MockOutboxMessageRepository::new()),
@@ -380,7 +392,7 @@ mod test {
         order_repository
             .expect_find_by_id()
             .returning(|_| Err(OrderRepositoryError::OrderNotFoundError));
-        let order_service = OrderService {
+        let mut order_service = OrderService {
             customer_repository: Box::new(MockMyCustomerRepository::new()),
             order_repository: Box::new(order_repository),
             outbox_message_repository: Box::new(MockOutboxMessageRepository::new()),

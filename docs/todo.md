@@ -26,6 +26,7 @@
 - [x] Implement outbox messages for order created
 - [x] Transactions don't work: they're using different pools!
 - [x] Proper error raising if committing/rollbacking a not existing transaction
+- [] apply effective Rust learnings (chapters 1, 2, and 3)
 
 - [] Implement outbox messages for item added to order
 - [] Handle errors in message publisher: what if the message is sent on the queue, but updating outbox fails?
@@ -33,7 +34,6 @@
 - [] stop using diesel repositories in rest API
 - [] create/drop test DB
 - [] apply aggregate rules
-- [] apply effective Rust learnings (chapters 1, 2, and 3)
 - [] add status to Order using an enumeration
 - [] setup github actions 
 - [] add linter

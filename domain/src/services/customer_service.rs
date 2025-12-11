@@ -82,7 +82,7 @@ impl CustomerService {
         let message = match OutboxMessage::customer_created_event(&saved_customer) {
             Ok(message) => message,
             Err(e) => {
-                error!("Error creating outbox message: {}", e);
+                error!("Error serializing outbox message: {}", e);
                 self.rollback_transaction().await?;
                 return Err(CustomerServiceError::GenericError(
                     "Error serializing outbox message".to_string(),
