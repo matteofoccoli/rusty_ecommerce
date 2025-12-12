@@ -22,7 +22,7 @@ impl fmt::Display for Address {
 #[derive(PartialEq, Debug)]
 pub struct CustomerId(pub Uuid);
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct OrderId(pub Uuid);
 
 #[derive(PartialEq, Debug)]

@@ -90,15 +90,12 @@ impl CustomerService {
             }
         };
 
-        match self.outbox_message_repository.save(message).await {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Error saving outbox message: {}", e);
-                self.rollback_transaction().await?;
-                return Err(CustomerServiceError::GenericError(
-                    "Outbox message not saved".to_string(),
-                ));
-            }
+        if let Err(e) = self.outbox_message_repository.save(message).await {
+            error!("Error saving outbox message: {}", e);
+            self.rollback_transaction().await?;
+            return Err(CustomerServiceError::GenericError(
+                "Outbox message not saved".to_string(),
+            ));
         };
 
         self.commit_transaction().await?;

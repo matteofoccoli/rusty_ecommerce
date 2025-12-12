@@ -41,6 +41,7 @@ pub struct OrderService {
     outbox_message_repository: Box<dyn OutboxMessageRepository>,
 }
 
+#[derive(Debug)]
 pub struct AddProductRequestObject {
     order_id: String,
     product_id: String,
@@ -110,22 +111,18 @@ impl OrderService {
             }
         };
 
-        match self.outbox_message_repository.save(message).await {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Error saving outbox message: {}", e);
-                self.rollback_transaction().await?;
-                return Err(OrderServiceError::GenericError(
-                    "Outbox message not saved".to_string(),
-                ));
-            }
+        if let Err(e) = self.outbox_message_repository.save(message).await {
+            error!("Error saving outbox message: {}", e);
+            self.rollback_transaction().await?;
+            return Err(OrderServiceError::GenericError(
+                "Outbox message not saved".to_string(),
+            ));
         }
 
         self.commit_transaction().await?;
         return Ok(saved_order);
     }
 
-    // TODO save outbox event also in this case
     pub async fn add_product(
         &mut self,
         add_product: AddProductRequestObject,
@@ -154,17 +151,42 @@ impl OrderService {
             quantity: add_product.quantity,
             product_id: ProductId(product_id),
         });
-        match self.order_repository.update(order).await {
-            Ok(order) => {
-                self.commit_transaction().await?;
-                Ok(order)
-            }
+
+        let updated_order = match self.order_repository.update(order).await {
+            Ok(order) => order,
             Err(e) => {
                 error!("Error saving order: {}", e);
                 self.rollback_transaction().await?;
                 return Err(OrderServiceError::OrderNotSavedError);
             }
+        };
+
+        let message = match OutboxMessage::product_added_to_order_event(
+            &OrderId(order_id),
+            &ProductId(product_id),
+            add_product.price,
+            add_product.quantity,
+        ) {
+            Ok(message) => message,
+            Err(e) => {
+                error!("Error serializing outbox message: {}", e);
+                self.rollback_transaction().await?;
+                return Err(OrderServiceError::GenericError(
+                    "Error serializing outbox message".to_string(),
+                ));
+            }
+        };
+
+        if let Err(e) = self.outbox_message_repository.save(message).await {
+            error!("Error serializing outbox message: {}", e);
+            self.rollback_transaction().await?;
+            return Err(OrderServiceError::GenericError(
+                "Error serializing outbox message".to_string(),
+            ));
         }
+
+        self.commit_transaction().await?;
+        Ok(updated_order)
     }
 
     async fn begin_transaction(&mut self) -> Result<(), OrderServiceError> {
@@ -206,7 +228,7 @@ mod test {
             outbox_repository::MockOutboxMessageRepository,
         },
         services::order_service::{AddProductRequestObject, CreateOrderRequestObject},
-        value_objects::{Address, CustomerId, OrderId},
+        value_objects::{Address, CustomerId, OrderId, ProductId},
     };
 
     use super::OrderService;
@@ -320,14 +342,14 @@ mod test {
     #[tokio::test]
     async fn adds_a_product_to_an_order() {
         let mut order_repository = MockMyOrderRepository::new();
-        order_repository.expect_find_by_id().returning(move |_| {
+        order_repository.expect_find_by_id().returning(|_| {
             Ok(Some(Order {
                 id: OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
                 customer_id: CustomerId(Uuid::new_v4()),
                 order_items: vec![],
             }))
         });
-        order_repository.expect_update().return_once(move |_| {
+        order_repository.expect_update().return_once(|_| {
             Ok(Order {
                 id: OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
                 customer_id: CustomerId(Uuid::new_v4()),
@@ -341,7 +363,27 @@ mod test {
             .expect_commit_transaction()
             .returning(|| Ok(()));
 
-        let outbox_message_repository = MockOutboxMessageRepository::new();
+        let price = 9.99;
+        let quantity = 1;
+
+        let saved_outbox_message = OutboxMessage::product_added_to_order_event(
+            &OrderId(Uuid::try_parse(ORDER_ID).unwrap()),
+            &ProductId(Uuid::try_parse(PRODUCT_ID).unwrap()),
+            price,
+            quantity,
+        )
+        .unwrap();
+        let expected_event_payload = saved_outbox_message.event_payload();
+        let mut outbox_message_repository = MockOutboxMessageRepository::new();
+        outbox_message_repository
+            .expect_save()
+            .withf(move |m| {
+                m.event_type() == OutboxMessageType::ProductAddedToOrder
+                    && m.processed_at().is_none()
+                    && m.event_payload() == expected_event_payload
+            })
+            .once()
+            .return_once(|_| Ok(saved_outbox_message));
 
         let customer_repository = MockMyCustomerRepository::new();
 
@@ -355,8 +397,8 @@ mod test {
             .add_product(AddProductRequestObject {
                 order_id: ORDER_ID.to_string(),
                 product_id: PRODUCT_ID.to_string(),
-                price: 10.0,
-                quantity: 1,
+                price,
+                quantity,
             })
             .await;
 

@@ -3,6 +3,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::entities::{customer::Customer, order::Order};
+use crate::value_objects::{OrderId, ProductId};
 
 #[derive(Debug)]
 pub enum OutboxMessageError {
@@ -25,16 +26,19 @@ impl std::error::Error for OutboxMessageError {}
 pub enum OutboxMessageType {
     OrderCreated,
     CustomerCreated,
+    ProductAddedToOrder,
 }
 
 const ORDER_CREATED: &str = "order_created";
 const CUSTOMER_CREATED: &str = "customer_created";
+const PRODUCT_ADDED_TO_ORDER: &str = "product_added_to_order";
 
 impl std::fmt::Display for OutboxMessageType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             OutboxMessageType::OrderCreated => write!(f, "{}", ORDER_CREATED),
             OutboxMessageType::CustomerCreated => write!(f, "{}", CUSTOMER_CREATED),
+            OutboxMessageType::ProductAddedToOrder => write!(f, "{}", PRODUCT_ADDED_TO_ORDER),
         }
     }
 }
@@ -46,6 +50,7 @@ impl std::str::FromStr for OutboxMessageType {
         match s {
             ORDER_CREATED => Ok(OutboxMessageType::OrderCreated),
             CUSTOMER_CREATED => Ok(OutboxMessageType::CustomerCreated),
+            PRODUCT_ADDED_TO_ORDER => Ok(OutboxMessageType::ProductAddedToOrder),
             _ => Err(format!("Unknown outbox message type: {}", s)),
         }
     }
@@ -101,6 +106,27 @@ impl OutboxMessage {
         })
     }
 
+    pub fn product_added_to_order_event(
+        order_id: &OrderId,
+        product_id: &ProductId,
+        price: f64,
+        quantity: i32,
+    ) -> Result<OutboxMessage, OutboxMessageError> {
+        let event_payload = product_added_to_order_event_payload(
+            order_id.0.to_string(),
+            product_id.0.to_string(),
+            price,
+            quantity,
+        )?;
+        Ok(OutboxMessage {
+            id: Uuid::new_v4(),
+            event_type: OutboxMessageType::ProductAddedToOrder,
+            event_payload,
+            created_at: Utc::now(),
+            processed_at: None,
+        })
+    }
+
     pub fn id(&self) -> Uuid {
         self.id
     }
@@ -132,12 +158,12 @@ struct CustomerCreatedEvent {
 }
 
 fn customer_created_event_payload(customer: &Customer) -> Result<String, OutboxMessageError> {
-    let customer_created_event = CustomerCreatedEvent {
+    let event = CustomerCreatedEvent {
         id: customer.id.0.to_string(),
         first_name: customer.first_name.clone(),
         last_name: customer.last_name.clone(),
     };
-    serde_json::to_string(&customer_created_event)
+    serde_json::to_string(&event)
         .map_err(|e| OutboxMessageError::PayloadSerializationError(e.to_string()))
 }
 
@@ -148,10 +174,34 @@ struct OrderCreatedEvent {
 }
 
 fn order_created_event_payload(order: &Order) -> Result<String, OutboxMessageError> {
-    let order_created_event = OrderCreatedEvent {
+    let event = OrderCreatedEvent {
         id: order.id.0.to_string(),
         customer_id: order.customer_id.0.to_string(),
     };
-    serde_json::to_string(&order_created_event)
+    serde_json::to_string(&event)
+        .map_err(|e| OutboxMessageError::PayloadSerializationError(e.to_string()))
+}
+
+#[derive(Serialize)]
+struct ProductAddedToOrderEvent {
+    order_id: String,
+    product_id: String,
+    quantity: i32,
+    price: f64,
+}
+
+fn product_added_to_order_event_payload(
+    order_id: String,
+    product_id: String,
+    price: f64,
+    quantity: i32,
+) -> Result<String, OutboxMessageError> {
+    let event = ProductAddedToOrderEvent {
+        order_id,
+        product_id,
+        price,
+        quantity,
+    };
+    serde_json::to_string(&event)
         .map_err(|e| OutboxMessageError::PayloadSerializationError(e.to_string()))
 }
